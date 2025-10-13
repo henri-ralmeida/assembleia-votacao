@@ -7,6 +7,8 @@ import com.henrique.votacao.exception.BusinessException;
 import com.henrique.votacao.exception.NotFoundException;
 import com.henrique.votacao.repository.PautaRepository;
 import com.henrique.votacao.repository.VotoRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -14,6 +16,8 @@ import java.util.List;
 
 @Service
 public class PautaService {
+
+    private static final Logger logger = LoggerFactory.getLogger(PautaService.class);
 
     private final PautaRepository pautaRepository;
     private final VotoRepository votoRepository;
@@ -23,17 +27,19 @@ public class PautaService {
         this.votoRepository = votoRepository;
     }
 
-    // Criar Nova Pauta
+    // Criar nova pauta
     public Pauta criarPauta(Pauta pauta) {
-        pauta.setAbertura(null);
+        logger.info("Criando nova pauta: {}", pauta.getTitulo());
+        pauta.setAbertura(null); // ainda não aberta
         pauta.setFechamento(null);
         return pautaRepository.save(pauta);
     }
 
-    // Abrir Sessão de Votação (tempo em minutos, default 1min)
+    // Abrir sessão de votação (tempo em minutos, default 1)
     public Pauta abrirSessao(Long pautaId, Integer duracaoMinutos) {
+        logger.info("Abrindo sessão de votação para pauta ID={} com duração {} minuto(s)", pautaId, duracaoMinutos != null ? duracaoMinutos : 1);
         Pauta pauta = pautaRepository.findById(pautaId)
-                .orElseThrow(() -> new NotFoundException("Pauta não encontrada"));
+                .orElseThrow(() -> new RuntimeException("Pauta não encontrada"));
 
         pauta.setAbertura(LocalDateTime.now());
         pauta.setFechamento(LocalDateTime.now().plusMinutes(duracaoMinutos != null ? duracaoMinutos : 1));
@@ -41,46 +47,56 @@ public class PautaService {
         return pautaRepository.save(pauta);
     }
 
-    // Registrar Voto
-    public Voto votar(Long pautaId, String associadoId, String escolhaStr) {
-        Pauta pauta = pautaRepository.findById(pautaId)
-                .orElseThrow(() -> new NotFoundException("Pauta não encontrada"));
+    // Registrar voto
+    public Voto votar(Long pautaId, String associadoId, String escolha) {
+        logger.info("Registrando voto: pautaID={}, associadoID={}, escolha={}", pautaId, associadoId, escolha);
 
+        Pauta pauta = pautaRepository.findById(pautaId)
+                .orElseThrow(() -> {
+                    logger.error("Pauta não encontrada: ID={}", pautaId);
+                    return new NotFoundException("Pauta não encontrada");
+                });
+
+        // Verifica se a sessão está aberta
         LocalDateTime agora = LocalDateTime.now();
-        if (pauta.getAbertura() == null || pauta.getFechamento() == null
-                || agora.isBefore(pauta.getAbertura()) || agora.isAfter(pauta.getFechamento())) {
+        if (pauta.getAbertura() == null || pauta.getFechamento() == null || agora.isAfter(pauta.getFechamento())) {
+            logger.warn("Tentativa de votar fora do período da sessão: pautaID={}, associadoID={}", pautaId, associadoId);
             throw new BusinessException("Sessão de votação fechada");
         }
 
+        // Verifica se o associado já votou
         if (votoRepository.existsByAssociadoIdAndPautaId(associadoId, pautaId)) {
+            logger.warn("Associado já votou: pautaID={}, associadoID={}", pautaId, associadoId);
             throw new BusinessException("Associado já votou");
-        }
-
-        Escolha escolha;
-        try {
-            escolha = Escolha.fromString(escolhaStr);
-        } catch (IllegalArgumentException e) {
-            throw new BusinessException("Escolha inválida: " + escolhaStr);
         }
 
         Voto voto = new Voto();
         voto.setAssociadoId(associadoId);
-        voto.setEscolha(escolha);
+        voto.setEscolha(Escolha.valueOf(escolha.toUpperCase()));
         voto.setPauta(pauta);
 
-        return votoRepository.save(voto);
+        Voto salvo = votoRepository.save(voto);
+        logger.info("Voto registrado com sucesso: {}", salvo);
+        return salvo;
     }
 
     // Contabilizar Votos
     public String resultadoVotacao(Long pautaId) {
+        logger.info("Consultando resultado da votação: pautaID={}", pautaId);
+
         Pauta pauta = pautaRepository.findById(pautaId)
-                .orElseThrow(() -> new NotFoundException("Pauta não encontrada"));
+                .orElseThrow(() -> {
+                    logger.error("Pauta não encontrada ao consultar resultado: ID={}", pautaId);
+                    return new NotFoundException("Pauta não encontrada");
+                });
 
         List<Voto> votos = pauta.getVotos();
         long sim = votos.stream().filter(v -> v.getEscolha() == Escolha.SIM).count();
         long nao = votos.stream().filter(v -> v.getEscolha() == Escolha.NAO).count();
 
 
-        return String.format("Resultado da Pauta %s: SIM=%d, NAO=%d", pauta.getTitulo(), sim, nao);
+        String resultado = String.format("Resultado da Pauta %s: SIM=%d, NAO=%d", pauta.getTitulo(), sim, nao);
+        logger.info("Resultado da votação calculado: {}", resultado);
+        return resultado;
     }
 }
