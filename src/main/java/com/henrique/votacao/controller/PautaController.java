@@ -18,6 +18,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @Tag(name = "Pautas", description = "Endpoints para gerenciamento de Pautas e Votações")
 @RestController
 @RequestMapping("/api/v1/pautas")
@@ -76,9 +78,9 @@ public class PautaController {
         logger.info("Request para votar recebida: pautaID={}, associadoID={}, escolha={}",
                 id, request.associadoId(), request.escolha());
 
-        String status = cpfClient.verificarCpf(request.associadoId());
+        Map<String, String> resultado = cpfClient.verificarCpf(request.associadoId());
+        String status = resultado.get("status"); // pega a string correta
         if (!"ABLE_TO_VOTE".equals(status)) {
-            logger.warn("Associado não autorizado a votar: pautaID={}, associadoID={}", id, request.associadoId());
             throw new BusinessException("Associado não autorizado a votar");
         }
 
