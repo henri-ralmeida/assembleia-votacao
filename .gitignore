@@ -14,6 +14,9 @@
 /pom.xml.versionsBackup
 /log/
 
+# DB
+*.db
+
 # Logs
 *.log
 
