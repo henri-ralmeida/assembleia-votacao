@@ -1,19 +1,27 @@
 package com.henrique.votacao.config;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
-import java.awt.*;
-
 @Component
+@ConditionalOnProperty(name = "launcher.ui.disabled", havingValue = "false")
 public class LauncherUI {
 
     private static final String SWAGGER_URL = "http://localhost:8080/swagger-ui/index.html";
     private static final String H2_URL = "http://localhost:8080/h2-console";
 
+    @Value("${launcher.ui.disabled:true}")
+    private boolean launcherDesativado;
+
     @EventListener(ApplicationReadyEvent.class)
     public void openSwaggerAndH2() {
+        if (launcherDesativado) {
+            return;
+        }
+
         try {
             System.out.println("Abrindo Swagger e H2 Console...");
 
