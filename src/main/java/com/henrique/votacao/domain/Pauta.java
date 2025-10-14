@@ -12,8 +12,8 @@ public class Pauta {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false)
     private String titulo;
-    private String descricao;
 
     private LocalDateTime abertura;
     private LocalDateTime fechamento;
@@ -21,7 +21,7 @@ public class Pauta {
     @OneToMany(mappedBy = "pauta", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Voto> votos = new ArrayList<>();
 
-    // Construtor
+    // Construtor padrão
     public Pauta() {}
 
     // Getters e Setters
@@ -31,9 +31,6 @@ public class Pauta {
     public String getTitulo() { return titulo; }
     public void setTitulo(String titulo) { this.titulo = titulo; }
 
-    public String getDescricao() { return descricao; }
-    public void setDescricao(String descricao) { this.descricao = descricao; }
-
     public LocalDateTime getAbertura() { return abertura; }
     public void setAbertura(LocalDateTime abertura) { this.abertura = abertura; }
 
@@ -42,4 +39,9 @@ public class Pauta {
 
     public List<Voto> getVotos() { return votos; }
     public void setVotos(List<Voto> votos) { this.votos = votos; }
+
+    public void adicionarVoto(Voto voto) {
+        votos.add(voto);
+        voto.setPauta(this);
+    }
 }

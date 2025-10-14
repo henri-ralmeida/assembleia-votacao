@@ -9,14 +9,18 @@ public class Voto {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String associadoId; // ID
-    private Escolha escolha;     // "SIM" ou "NAO"
+    @Column(nullable = false)
+    private String associadoId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Escolha escolha;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "pauta_id")
     private Pauta pauta;
 
-    // Construtor
+    // Construtor padrão
     public Voto() {}
 
     // Getters e Setters

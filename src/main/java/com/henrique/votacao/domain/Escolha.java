@@ -8,9 +8,10 @@ public enum Escolha {
     NAO;
 
     public static Escolha fromString(String valor) {
+        if (valor == null) throw new IllegalArgumentException("Escolha não pode ser nula");
         try {
-            return Escolha.valueOf(valor.toUpperCase());
-        } catch (Exception e) {
+            return valueOf(valor.toUpperCase());
+        } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("Escolha inválida: " + valor);
         }
     }

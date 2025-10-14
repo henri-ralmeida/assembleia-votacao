@@ -4,11 +4,11 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 
-@Schema(description = "Request para registrar voto")
-public record VotoRequestDTO(
+@Schema(description = "Request para registrar votação")
+public record VotacaoRequestDTO(
         @Schema(description = "ID do associado", example = "12345678900")
         @NotBlank(message = "O ID do associado é obrigatório")
-        @Pattern(regexp = "\\d{11}", message = "O ID do associado deve conter 11 dígitos numéricos (CPF)")
+        @Pattern(regexp = "\\d{11}", message = "O CPF deve conter exatamente 11 números")
         String associadoId,
 
         @Schema(description = "Escolha do voto (SIM/NAO)", example = "SIM")
