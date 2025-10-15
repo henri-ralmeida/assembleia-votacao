@@ -1,6 +1,7 @@
 package com.henrique.votacao.repository;
 
 import com.henrique.votacao.domain.Pauta;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
