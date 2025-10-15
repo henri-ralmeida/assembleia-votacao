@@ -35,7 +35,7 @@ public class VotacaoController {
     }
 
     @Operation(summary = "Cria uma nova pauta")
-    @ApiResponse(responseCode = "200", description = "Pauta criada com sucesso",
+    @ApiResponse(responseCode = "201", description = "Pauta criada com sucesso",
             content = @Content(schema = @Schema(implementation = PautaRequestDTO.class)))
     @ApiResponse(responseCode = "400", description = "O título é obrigatório")
     @PostMapping
@@ -49,7 +49,8 @@ public class VotacaoController {
 
         logger.info("Pauta criada com sucesso: ID={}, Titulo={}", criada.getId(), criada.getTitulo());
 
-        return ResponseEntity.ok(new PautaRequestDTO(criada.getTitulo()));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(new PautaRequestDTO(criada.getTitulo()));
     }
 
     @Operation(summary = "Abre sessão de votação")
@@ -76,7 +77,7 @@ public class VotacaoController {
     }
 
     @Operation(summary = "Registra um voto")
-    @ApiResponse(responseCode = "200", description = "Voto registrado com sucesso",
+    @ApiResponse(responseCode = "201", description = "Voto registrado com sucesso",
             content = @Content(schema = @Schema(implementation = VotoRequestDTO.class)))
     @ApiResponse(responseCode = "400", description = "O CPF deve conter exatamente 11 números")
     @ApiResponse(responseCode = "401", description = "Associado não autorizado a votar")
@@ -92,7 +93,8 @@ public class VotacaoController {
         logger.info("Voto registrado com sucesso: titulo={}, associadoID={}, escolha={}",
                 request.titulo(), voto.getAssociadoId(), voto.getEscolha());
 
-        return ResponseEntity.ok(new VotoRequestDTO(request.titulo(), voto.getAssociadoId(), voto.getEscolha().name()));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(new VotoRequestDTO(request.titulo(), voto.getAssociadoId(), voto.getEscolha().name()));
     }
 
     @Operation(summary = "Obtém o resultado da votação")
@@ -101,7 +103,7 @@ public class VotacaoController {
     @ApiResponse(responseCode = "404", description = "Pauta não encontrada")
     @GetMapping("/resultado")
     public ResponseEntity<String> resultado(
-            @RequestParam(value = "titulo", defaultValue = "Devemos distribuir sacolinhas no Pet Place?") String titulo) {
+            @RequestParam(value = "titulo") String titulo) {
         logger.info("Recebida requisição de resultado: titulo={}", titulo);
 
         String resultado = votoService.calcularResultadoPorTitulo(titulo);

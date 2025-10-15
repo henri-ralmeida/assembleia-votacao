@@ -1,14 +1,14 @@
 package com.henrique.votacao.service;
 
 import com.henrique.votacao.domain.Pauta;
-import com.henrique.votacao.exception.BusinessException;
-import com.henrique.votacao.exception.NotFoundException;
 import com.henrique.votacao.repository.PautaRepository;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -29,13 +29,13 @@ public class PautaService {
      * Cria uma nova pauta no sistema.
      * @param pauta Objeto Pauta com os dados a serem salvos
      * @return Pauta criada com ID incremental
-     * @throws BusinessException caso já exista uma pauta com o mesmo título
+     * @throws ResponseStatusException retorna um HTTP 409 Conflict quando já uma pauta com o mesmo título
      */
     public Pauta criarPauta(Pauta pauta) {
         logger.info("Criando nova pauta: {}", pauta.getTitulo());
 
         if (pautaRepository.existsByTitulo(pauta.getTitulo())) {
-            throw new BusinessException("Já existe uma pauta com esse título");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Já existe uma pauta com esse título");
         }
 
         return pautaRepository.save(pauta);
@@ -47,13 +47,13 @@ public class PautaService {
      * @param titulo título da pauta
      * @param duracaoMinutos duração da sessão em minutos (opcional)
      * @return Pauta com sessão aberta (com abertura e fechamento definidos)
-     * @throws NotFoundException caso não exista pauta com o título informado
+     * @throws ResponseStatusException retorna um HTTP 404 Not Found
      */
     public Pauta abrirSessao(String titulo, Integer duracaoMinutos) {
         Pauta pauta = pautaRepository.findByTitulo(titulo)
                 .orElseThrow(() -> {
                     logger.error("Pauta não encontrada: titulo={}", titulo);
-                    return new NotFoundException("Pauta não encontrada");
+                    return new ResponseStatusException(HttpStatus.NOT_FOUND, "Pauta não encontrada");
                 });
 
         if (duracaoMinutos == null || duracaoMinutos < 1) {

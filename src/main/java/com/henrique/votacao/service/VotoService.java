@@ -39,6 +39,7 @@ public class VotoService {
      * @param associadoId CPF ou ID do associado
      * @param escolhaStr "SIM" ou "NAO"
      * @return Voto registrado
+     * @throws ResponseStatusException retorna um HTTP 404 Not Found quando nao encontra a Pauta
      */
     public Voto registrarVotoPorTitulo(String titulo, String associadoId, String escolhaStr) {
         Pauta pauta = pautaService.buscarPorTitulo(titulo)
@@ -62,6 +63,7 @@ public class VotoService {
      * Calcula o resultado da pauta pelo título, incluindo porcentagem e aprovação/reprovação
      * @param titulo Título da pauta
      * @return Resultado da votação
+     * @throws ResponseStatusException retorna um HTTP 404 Not Found quando nao encontra a Pauta
      */
     public String calcularResultadoPorTitulo(String titulo) {
         Pauta pauta = pautaService.buscarPorTitulo(titulo)
@@ -90,6 +92,7 @@ public class VotoService {
     /**
      * Valida se a sessão da pauta está aberta usando a string formatada
      * @param pauta Pauta
+     * @throws ResponseStatusException retorna um HTTP 404 Not Found quando nao encontra a Pauta
      */
     private void validarSessaoAberta(Pauta pauta) {
         if (pauta.getAbertura() == null || pauta.getFechamento() == null) {
@@ -109,6 +112,7 @@ public class VotoService {
      * Verifica se o associado já votou na pauta
      * @param associadoId CPF do Associado
      * @param pautaId Id da Pauta
+     * @throws ResponseStatusException retorna um HTTP 409 Conflict quando já uma pauta com o mesmo título
      */
     private void validarVotoUnico(String associadoId, Long pautaId) {
         if (votoRepository.existsByAssociadoIdAndPautaId(associadoId, pautaId)) {
@@ -119,6 +123,7 @@ public class VotoService {
     /**
      * Valida o CPF do associado usando o Client Fake
      * @param associadoId CPF do associado
+     * @throws ResponseStatusException retorna um HTTP 401 Unathorized quando o associado não está autorizado a votar
      */
     private void validarCpf(String associadoId) {
         Map<String, String> resposta = cpfClient.verificarCpf();
@@ -134,6 +139,7 @@ public class VotoService {
      * Converte String para Enum Escolha
      * @param escolhaStr String para Enum
      * @return Resultado da Escolha em Enum
+     * @throws BusinessException retorna uma mensagem dizendo que a escolha está inválida
      */
     private Escolha parseEscolha(String escolhaStr) {
         try {
