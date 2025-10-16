@@ -18,7 +18,7 @@ API REST para **gerenciar pautas** e **registrar votos** de forma simples, valid
 
 ---
 
-## APLANIArquitetura da Solução
+## 🚛 Arquitetura da Solução
 
 ### 1️⃣ Estrutura de Endpoints e Domínio
    - Todos os endpoints de pautas e votações utilizam `tituloPauta` como identificador para facilitar testes e uso via Swagger.
