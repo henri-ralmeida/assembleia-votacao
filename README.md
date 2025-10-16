@@ -1,117 +1,274 @@
-# Votação
+# 📊 API de Votações
 
-## Objetivo
+API REST para **gerenciar pautas** e **registrar votos** de forma simples, validada e com respostas padronizadas.
 
-No cooperativismo, cada associado possui um voto e as decisões são tomadas em assembleias, por votação. Imagine que você deve criar uma solução para dispositivos móveis para gerenciar e participar dessas sessões de votação.
-Essa solução deve ser executada na nuvem e promover as seguintes funcionalidades através de uma API REST:
+---
 
-- Cadastrar uma nova pauta
-- Abrir uma sessão de votação em uma pauta (a sessão de votação deve ficar aberta por
-  um tempo determinado na chamada de abertura ou 1 minuto por default)
-- Receber votos dos associados em pautas (os votos são apenas 'Sim'/'Não'. Cada associado
-  é identificado por um id único e pode votar apenas uma vez por pauta)
-- Contabilizar os votos e dar o resultado da votação na pauta
+## Tecnologias e Ferramentas
 
-Para fins de exercício, a segurança das interfaces pode ser abstraída e qualquer chamada para as interfaces pode ser considerada como autorizada. A solução deve ser construída em java, usando Spring-boot, mas os frameworks e bibliotecas são de livre escolha (desde que não infrinja direitos de uso).
+- **Java 21** – Versão utilizada para o desenvolvimento da aplicação.
 
-É importante que as pautas e os votos sejam persistidos e que não sejam perdidos com o restart da aplicação.
+- **Spring Boot 3.5.6** – Framework principal para construir a API REST.
 
-O foco dessa avaliação é a comunicação entre o backend e o aplicativo mobile. Essa comunicação é feita através de mensagens no formato JSON, onde essas mensagens serão interpretadas pelo cliente para montar as telas onde o usuário vai interagir com o sistema. A aplicação cliente não faz parte da avaliação, apenas os componentes do servidor. O formato padrão dessas mensagens será detalhado no anexo 1.
+- **Maven** – Ferramenta de build e gerenciamento de dependências.
 
-## Como proceder
+- **Banco de dados H2** – usado em localmente para testes e salvo dentro da pasta `data` para persistência
 
-Por favor, **CLONE** o repositório e implemente sua solução, ao final, notifique a conclusão e envie o link do seu repositório clonado no GitHub, para que possamos analisar o código implementado.
+- **Swagger / OpenAPI** – documentação interativa para testar endpoints de forma simples.
 
-Lembre de deixar todas as orientações necessárias para executar o seu código.
+---
 
-### Tarefas bônus
+## Arquitetura da Solução
 
-- Tarefa Bônus 1 - Integração com sistemas externos
-  - Criar uma Facade/Client Fake que retorna aleátoriamente se um CPF recebido é válido ou não.
-  - Caso o CPF seja inválido, a API retornará o HTTP Status 404 (Not found). Você pode usar geradores de CPF para gerar CPFs válidos
-  - Caso o CPF seja válido, a API retornará se o usuário pode (ABLE_TO_VOTE) ou não pode (UNABLE_TO_VOTE) executar a operação. Essa operação retorna resultados aleatórios, portanto um mesmo CPF pode funcionar em um teste e não funcionar no outro.
+---
 
-```
-// CPF Ok para votar
+### **1. Estrutura de Endpoints e Domínio**
+   - Todos os endpoints de pautas e votações utilizam `tituloPauta` como identificador para facilitar testes e uso via Swagger.
+   - O uso de `tituloPauta` torna a *API legível e amigável, sem que o usuário precise conhecer *IDs* internos do banco.
+   - Em um cenário real, o `id` da pauta poderia ser usado internamente, mantendo a mesma experiência para o cliente.
+
+### **2. Testes Unitários e Integração**
+   - Foram criados testes unitários com **JUnit 5** e **Mockito**, cobrindo todos os cenários de criação de pautas, abertura de sessão, votação e cálculo de resultados.
+   - Para testes de integração, usamos **MockMvc**, permitindo simular requisições HTTP completas sem levantar o servidor real.
+     - **Teste de votos massivos:**
+   ```java
+IntStream.range(0, TOTAL_VOTOS).forEach(i -> {
+String cpf = String.format("%011d", i);
+VotoRequestDTO request = new VotoRequestDTO(cpf, "SIM");
+    mockMvc.perform(post("/api/v1/pautas/" + pauta.getTituloPauta() + "/votos")
+        .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isCreated());
+        });
+   ``` 
+   - Executa centenas ou milhares de requisições em sequência.
+   - Valida o comportamento da API em cenários de alta carga.
+   - Serve como teste funcional e como benchmark de performance.
+
+### 3. Integração com Sistemas Externos (Tarefa Bônus 1)
+ - Criado um *Client/Facade Fake* que simula a validação de CPF:
+   - Retorna aleatoriamente `"ABLE_TO_VOTE"` ou `"UNABLE_TO_VOTE"`.
+
+
+### 4. Performance e Escalabilidade (Tarefa Bônus 2)
+
+- Testes de votos massivos simulam centenas ou milhares de requisições.
+- O uso de **H2** salvo na pasta local e **MockMvc** permite medir tempos de resposta e identificar gargalos rapidamente via terminal.
+- O design segue boas práticas do Spring, garantindo transações consistentes e baixo overhead em cenários de grande volume de votos.
+
+### 5. Versionamento (Tarefa Bônus 3)
+
+- Todos os endpoints são versionados via URL: `/api/v1/...`
+- Essa estratégia permite evoluir a API sem quebrar clientes existentes.
+- Futuras versões poderiam adicionar novos recursos ou alterar respostas, mantendo compatibilidade com clientes antigos.
+
+### 6. Outras Ferramentas e Boas Práticas
+
+- **Logs:** `SLF4J` + `LoggerFactory` para rastreamento de ações e auditoria.
+- **Documentação no Código:** `@JavaDoc` nas classes de serviço e `@Swagger` nos controllers.
+- **Validações:** `@Valid` e DTOs para entrada e saída de dados, garantindo integridade antes de chegar à camada de serviço.
+- **Tratamento de exceções:** `GlobalExceptionHandler` categoriza os possíveis erros.
+- **Banco de dados H2:** configurado em `application.properties` para `mvn spring-boot:run` e em `application-test.properties` para `mvn test`.
+- **Inicialização de Interface Gráfica:** o arquivo `LauncherUI` controla se abre a página do Swagger e do H2; quando `mvn test` não abre interface, mas `mvn spring-boot:run` abre no navegador padrão.
+
+---
+
+## 🌐 Base URL
+
+`/api/v1/pautas`
+
+---
+
+## 🛠️ Endpoints
+
+---
+
+### 1️⃣ Criar Pauta
+- **POST** `/api/v1/pautas`
+- **Descrição:** Cria uma nova pauta de votação.
+
+---
+
+## **Request Body**
+| Campo  | Tipo   | Obrigatório | Descrição                                                           |
+|--------|--------|-------------|---------------------------------------------------------------------|
+| tituloPauta | String | Sim         | Devemos distribuir sacolinhas no Pet Place??                                      |
+
+## **Exemplo Request**
+```json
 {
-    "status": "ABLE_TO_VOTE
-}
-// CPF Nao Ok para votar - retornar 404 no client tb
-{
-    "status": "UNABLE_TO_VOTE
-}
-```
-
-Exemplos de retorno do serviço
-
-### Tarefa Bônus 2 - Performance
-
-- Imagine que sua aplicação possa ser usada em cenários que existam centenas de
-  milhares de votos. Ela deve se comportar de maneira performática nesses
-  cenários
-- Testes de performance são uma boa maneira de garantir e observar como sua
-  aplicação se comporta
-
-### Tarefa Bônus 3 - Versionamento da API
-
-○ Como você versionaria a API da sua aplicação? Que estratégia usar?
-
-## O que será analisado
-
-- Simplicidade no design da solução (evitar over engineering)
-- Organização do código
-- Arquitetura do projeto
-- Boas práticas de programação (manutenibilidade, legibilidade etc)
-- Possíveis bugs
-- Tratamento de erros e exceções
-- Explicação breve do porquê das escolhas tomadas durante o desenvolvimento da solução
-- Uso de testes automatizados e ferramentas de qualidade
-- Limpeza do código
-- Documentação do código e da API
-- Logs da aplicação
-- Mensagens e organização dos commits
-
-## Dicas
-
-- Teste bem sua solução, evite bugs
-- Deixe o domínio das URLs de callback passiveis de alteração via configuração, para facilitar
-  o teste tanto no emulador, quanto em dispositivos fisicos.
-  Observações importantes
-- Não inicie o teste sem sanar todas as dúvidas
-- Iremos executar a aplicação para testá-la, cuide com qualquer dependência externa e
-  deixe claro caso haja instruções especiais para execução do mesmo
-  Classificação da informação: Uso Interno
-
-## Anexo 1
-
-### Introdução
-
-A seguir serão detalhados os tipos de tela que o cliente mobile suporta, assim como os tipos de campos disponíveis para a interação do usuário.
-
-### Tipo de tela – FORMULARIO
-
-A tela do tipo FORMULARIO exibe uma coleção de campos (itens) e possui um ou dois botões de ação na parte inferior.
-
-O aplicativo envia uma requisição POST para a url informada e com o body definido pelo objeto dentro de cada botão quando o mesmo é acionado. Nos casos onde temos campos de entrada
-de dados na tela, os valores informados pelo usuário são adicionados ao corpo da requisição. Abaixo o exemplo da requisição que o aplicativo vai fazer quando o botão “Ação 1” for acionado:
-
-```
-POST http://seudominio.com/ACAO1
-{
-    “campo1”: “valor1”,
-    “campo2”: 123,
-    “idCampoTexto”: “Texto”,
-    “idCampoNumerico: 999
-    “idCampoData”: “01/01/2000”
+  "tituloPauta": "Devemos distribuir sacolinhas no Pet Place?"
 }
 ```
+---
 
-Obs: o formato da url acima é meramente ilustrativo e não define qualquer padrão de formato.
+## **Códigos de Retorno**
 
-### Tipo de tela – SELECAO
+| Código | Descrição                           | Exemplo de Retorno                                            |
+| ------ | ----------------------------------- |---------------------------------------------------------------|
+| 201    | Pauta criada com sucesso            | `{ "tituloPauta": "Devemos distribuir sacolinhas no Pet Place?" }` |
+| 400    | O título é obrigatório              | `{ "tituloPauta": "O título da pauta é obrigatório" }`             |
+| 409    | Já existe uma pauta com esse título | `{ "error": "Já existe uma pauta com esse título" }`          |
 
-A tela do tipo SELECAO exibe uma lista de opções para que o usuário.
+---
 
-O aplicativo envia uma requisição POST para a url informada e com o body definido pelo objeto dentro de cada item da lista de seleção, quando o mesmo é acionado, semelhando ao funcionamento dos botões da tela FORMULARIO.
+### 2️⃣ Abrir Sessão
+- **POST** `/api/v1/pautas/{tituloPauta}/sessoes`
+- **Descrição:** Abre uma sessão de votação em uma pauta
 
-# desafio-votacao
+---
+
+## **Parâmetros**
+
+| Nome     | Local | Tipo   | Obrigatório | Descrição                        |
+| -------- | ----- | ------ | ----------- | -------------------------------- |
+| `tituloPauta` | Path  | String | Sim         | Título da pauta a ser consultada |
+
+
+## **Request Body**
+| Campo          | Tipo    | Obrigatório | Descrição                                                                           |
+| -------------- | ------- | ----------- |-------------------------------------------------------------------------------------|
+| duracaoMinutos | Integer | Não         | Duração da sessão em minutos (padrão: 1, qualquer valor < 1 será substituído por 1) |
+
+---
+
+## **Exemplo Request**
+```json
+{
+  "duracaoMinutos": 1
+}
+```
+
+---
+
+## Códigos de Retorno
+
+| Código | Descrição                 | Exemplo de Retorno                                                                                                        |
+| ------ | ------------------------- |---------------------------------------------------------------------------------------------------------------------------|
+| 200    | Sessão aberta com sucesso | `{ "mensagem": "Sessão de votação aberta por 5 minuto(s) para a pauta: 'Devemos' distribuir sacolinhas no Pet Place?'" }` |
+| 404    | Pauta não encontrada      | `{ "error:" "Pauta  não encontrada" }`                                                                                    |
+
+---
+
+### 3️⃣ Registrar Voto
+- **POST** `/api/v1/pautas/{tituloPauta}/votos`
+- **Descrição:** Registra um voto em uma pauta.
+
+---
+
+## **Parâmetros**
+
+| Nome     | Local | Tipo   | Obrigatório | Descrição                        |
+| -------- | ----- | ------ | ----------- | -------------------------------- |
+| `tituloPauta` | Path  | String | Sim         | Título da pauta a ser consultada |
+
+## **Request Body**
+| Campo   | Tipo   | Obrigatório | Descrição                       |
+|---------| ------ | ----------- |---------------------------------|
+| cpf     | String | Sim         | CPF do associado (11 dígitos)   |
+| escolha | String | Sim         | Valor do voto: "SIM" ou "NAO"   |
+
+---
+
+## **Exemplo Request 1**
+```json
+{
+  "cpf": "12345678900",
+  "escolha": "SIM"
+}
+```
+
+## **Exemplo Request 2**
+```json
+{
+  "cpf": "12345678999",
+  "escolha": "NAO"
+}
+```
+
+---
+
+## **Códigos de Retorno**
+| Código | Descrição                        | Exemplo de Retorno                                                                                                                     |
+| ------ |----------------------------------|----------------------------------------------------------------------------------------------------------------------------------------|
+| 201    | Voto registrado com sucesso      | `{ "mensagem": "Voto 'SIM' registrado com sucesso para pauta 'Devemos distribuir sacolinhas no Pet Place?' no CPF de '12345678900'" }` |
+| 400    | CPF inválido                     | `{ "cpf:" "O CPF deve conter exatamente 11 números" }`                                                                                 |
+| 400    | Sessão de votação não foi aberta | `{ "error:" "Sessão de votação não foi aberta" }`                                                                                      |
+| 400    | Sessão de votação fechada        | `{ "error:" "Sessão de votação fechada" }`                                                                                             |
+| 401    | Associado não autorizado a votar | `{ "error:" "Associado não autorizado a votar" }`                                                                                      |
+| 404    | Pauta não encontrada             | `{ "error:" "Pauta  não encontrada" }`                                                                                                 |
+| 409    | Associado já votou               | `{ "error:" "Associado já votou" }`                                                                                                    |
+
+---
+
+### 4️⃣ Obter Resultado da Pauta
+- **GET** `/api/v1/pautas/{tituloPauta}/resultados`
+- **Descrição:** Obtém o resultado da votação de uma pauta.
+
+---
+
+## **Parâmetros**
+
+| Nome     | Local | Tipo   | Obrigatório | Descrição                        |
+| -------- | ----- | ------ | ----------- | -------------------------------- |
+| `tituloPauta` | Path  | String | Sim         | Título da pauta a ser consultada |
+
+---
+
+## **Códigos de Retorno**
+| Código | Descrição                       | Exemplo de Retorno (JSON)                                                                                                         |
+| ------ | ------------------------------- |-----------------------------------------------------------------------------------------------------------------------------------|
+| 200    | Resultado retornado com sucesso | `{ "tituloPauta": "Devemos distribuir sacolinhas no Pet Place?", "resultado": { "sim": 36, "nao": 64, "status": "REPROVADA" } }`       |
+| 200    | Pauta sem nenhum voto           | `{ "tituloPauta": "Seguranca deve monitorar as areas comuns por 24hrs?", "resultado": { "sim": 0, "nao": 0, "status": "SEM_VOTOS" } }` |
+| 404    | Pauta não encontrada            | `{ "error:" "Pauta  não encontrada" }`                                                                                            |
+
+---
+
+## Validações Gerais das 4 Rotas
+
+- CPF deve conter exatamente 11 dígitos.
+- Escolha do voto deve ser "SIM" ou "NAO".
+- Sessão deve estar aberta para aceitar votos.
+- Associado deve ser habilitado para votar ("status": "ABLE_TO_VOTE").
+- Associado não pode votar mais de uma vez na mesma pauta.
+
+---
+
+## Observações
+
+- Todos os endpoints de POST usam JSON como formato de request e response.
+- Todas as rotas estão sob o path `/api/v1/pauta`.
+- Status HTTP corretos:
+    - `200 OK` — sucesso
+    - `201 Created` - criado (Pauta criada ou Voto registrado)
+    - `400 Bad Request` — request inválido (ex.: JSON malformado, validação falhou)
+    - `404 Not Found` — Pauta não encontrada
+    - `409 Conflict` — conflito de negócio (ex.: associado já votou)
+
+---
+
+## Banco de Dados
+- Os dados de pautas e votos são persistidos em banco de dados local em arquivo, garantindo que informações não sejam perdidas entre reinicializações do servidor.
+- Recomenda-se backup periódico caso a API seja usada em produção.
+- Para ambientes de teste, os dados podem ser resetados ou populados automaticamente.
+- O formato do banco é transparente para a API; os endpoints continuam funcionando via JSON sem precisar acessar diretamente os arquivos.
+
+## 📂 Exemplos de Banco de Dados
+
+### Tabela: Pauta
+| ID | ABERTURA            | DURACAO_MINUTOS | FECHAMENTO          | TITULO_PAUTA                                               |
+| -- |---------------------|-----------------|---------------------| ---------------------------------------------------------- |
+| 1  | 15/10/2025 21:41:31 | 10              | 15/10/2025 21:51:31 | Devemos distribuir sacolinhas no Pet Place?                |
+| 2  | 15/10/2025 21:41:58 | 40              | 15/10/2025 22:21:58 | Entregadores podem entrar dentro do condomínio?            |
+| 3  | null                | null            | null                | Segurança deve monitorar as áreas comuns por 24hrs?        |
+| 4  | null                | null            | null                | O horário permitido na piscina deve ser reduzido para 21h? |
+
+### Tabela: Voto
+
+| ID | CPF_ID      | ESCOLHA | PAUTA_ID |
+|----|-------------|---------|----------|
+| 1  | 12345678900 | SIM     | 1        |
+| 2  | 12345678901 | SIM     | 1        |
+| 3  | 12345678902 | NAO     | 1        |
+| 4  | 12345678903 | NAO     | 1        |
+| 5  | 12345678923 | SIM     | 1        |
