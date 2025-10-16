@@ -219,7 +219,9 @@ VotoRequestDTO request = new VotoRequestDTO(cpf, "SIM");
 ## **Códigos de Retorno**
 | Código | Descrição                       | Exemplo de Retorno (JSON)                                                                                                              |
 | ------ | ------------------------------- |----------------------------------------------------------------------------------------------------------------------------------------|
-| 200    | Resultado retornado com sucesso | `{ "tituloPauta": "Devemos distribuir sacolinhas no Pet Place?", "resultado": { "sim": 36, "nao": 64, "status": "REPROVADA" } }`       |
+| 200    | Resultado retornado - REPROVADA | `{ "tituloPauta": "Devemos distribuir sacolinhas no Pet Place?", "resultado": { "sim": 36, "nao": 64, "status": "REPROVADA" } }`       |
+| 200    | Resultado retornado - APROVADA  | `{ "tituloPauta": "Devemos distribuir sacolinhas no Pet Place?", "resultado": { "sim": 64, "nao": 36, "status": "APROVADA" } }`        | 
+| 200    | Resultado retornado - EMPATE    | `{ "tituloPauta": "Devemos distribuir sacolinhas no Pet Place?", "resultado": { "sim": 50, "nao": 50, "status": "EMPATE" } }`          |
 | 200    | Pauta sem nenhum voto           | `{ "tituloPauta": "Seguranca deve monitorar as areas comuns por 24hrs?", "resultado": { "sim": 0, "nao": 0, "status": "SEM_VOTOS" } }` |
 | 404    | Pauta não encontrada            | `{ "error:" "Pauta  não encontrada" }`                                                                                                 |
 
