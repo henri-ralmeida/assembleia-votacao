@@ -20,12 +20,12 @@ API REST para **gerenciar pautas** e **registrar votos** de forma simples, valid
 
 ## Arquitetura da Solução
 
-### **1. Estrutura de Endpoints e Domínio**
+### 1️⃣ Estrutura de Endpoints e Domínio
    - Todos os endpoints de pautas e votações utilizam `tituloPauta` como identificador para facilitar testes e uso via Swagger.
    - O uso de `tituloPauta` torna a API legível e amigável, sem que o usuário precise conhecer *IDs* internos do banco.
    - Em um cenário real, o `id` da pauta poderia ser usado internamente, mantendo a mesma experiência para o cliente.
 
-### **2. Testes Unitários e Integração**
+### 2️⃣ Testes Unitários e Integração
    - Foram criados testes unitários com **JUnit 5** e **Mockito**, cobrindo todos os cenários de criação de pautas, abertura de sessão, votação e cálculo de resultados.
    - Para testes de integração, usamos **MockMvc**, permitindo simular requisições HTTP completas sem levantar o servidor real.
      - **Teste de votos massivos:**
@@ -43,24 +43,24 @@ VotoRequestDTO request = new VotoRequestDTO(cpf, "SIM");
    - Valida o comportamento da API em cenários de alta carga.
    - Serve como teste funcional e como benchmark de performance.
 
-### 3. Integração com Sistemas Externos (Tarefa Bônus 1)
+### 3️⃣ Integração com Sistemas Externos (Tarefa Bônus 1)
  - Criado um *Client/Facade Fake* que simula a validação de CPF:
    - Retorna aleatoriamente `"ABLE_TO_VOTE"` ou `"UNABLE_TO_VOTE"`.
 
 
-### 4. Performance e Escalabilidade (Tarefa Bônus 2)
+### 4️⃣ Performance e Escalabilidade (Tarefa Bônus 2)
 
 - Testes de votos massivos simulam centenas ou milhares de requisições.
 - O uso de **H2** salvo na pasta local e **MockMvc** permite medir tempos de resposta e identificar gargalos rapidamente via terminal.
 - O design segue boas práticas do Spring, garantindo transações consistentes e baixo overhead em cenários de grande volume de votos.
 
-### 5. Versionamento (Tarefa Bônus 3)
+### 5️⃣ Versionamento (Tarefa Bônus 3)
 
 - Todos os endpoints são versionados via URL: `/api/v1/...`
 - Essa estratégia permite evoluir a API sem quebrar clientes existentes.
 - Futuras versões poderiam adicionar novos recursos ou alterar respostas, mantendo compatibilidade com clientes antigos.
 
-### 6. Outras Ferramentas e Boas Práticas
+### 6️⃣ Outras Ferramentas e Boas Práticas
 
 - **Logs:** `SLF4J` + `LoggerFactory` para rastreamento de ações e auditoria.
 - **Documentação no Código:** `@JavaDoc` nas classes de serviço e `@Swagger` nos controllers.
@@ -156,8 +156,8 @@ VotoRequestDTO request = new VotoRequestDTO(cpf, "SIM");
 
 ## **Parâmetros**
 
-| Nome     | Local | Tipo   | Obrigatório | Descrição                        |
-| -------- | ----- | ------ | ----------- | -------------------------------- |
+| Nome          | Local | Tipo   | Obrigatório | Descrição                        |
+| ------------- | ----- | ------ | ----------- | -------------------------------- |
 | `tituloPauta` | Path  | String | Sim         | Título da pauta a ser consultada |
 
 ## **Request Body**
@@ -207,8 +207,8 @@ VotoRequestDTO request = new VotoRequestDTO(cpf, "SIM");
 
 ## **Parâmetros**
 
-| Nome     | Local | Tipo   | Obrigatório | Descrição                        |
-| -------- | ----- | ------ | ----------- | -------------------------------- |
+| Nome          | Local | Tipo   | Obrigatório | Descrição                        |
+| ------------- | ----- | ------ | ----------- | -------------------------------- |
 | `tituloPauta` | Path  | String | Sim         | Título da pauta a ser consultada |
 
 ---
