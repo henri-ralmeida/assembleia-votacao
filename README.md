@@ -24,7 +24,7 @@ API REST para **gerenciar pautas** e **registrar votos** de forma simples, valid
 
 ### **1. Estrutura de Endpoints e Domínio**
    - Todos os endpoints de pautas e votações utilizam `tituloPauta` como identificador para facilitar testes e uso via Swagger.
-   - O uso de `tituloPauta` torna a *API legível e amigável, sem que o usuário precise conhecer *IDs* internos do banco.
+   - O uso de `tituloPauta` torna a API legível e amigável, sem que o usuário precise conhecer *IDs* internos do banco.
    - Em um cenário real, o `id` da pauta poderia ser usado internamente, mantendo a mesma experiência para o cliente.
 
 ### **2. Testes Unitários e Integração**
