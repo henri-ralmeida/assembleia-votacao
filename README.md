@@ -10,9 +10,9 @@ API REST para **gerenciar pautas** e **registrar votos** de forma simples, valid
 
 - **Spring Boot 3.5.6** – Framework principal para construir a API REST.
 
-- **Maven** – Ferramenta de build e gerenciamento de dependências.
+- **Maven** – Ferramenta de Build e gerenciamento de dependências.
 
-- **Banco de dados H2** – Usado em localmente para testes e salvo dentro da pasta `data` para persistência
+- **Banco de dados H2** – Usado localmente para testes e salvo dentro da pasta `data` para persistência
 
 - **Swagger / OpenAPI** – Documentação interativa para testar endpoints de forma simples.
 
