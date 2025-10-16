@@ -19,6 +19,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
 class PautaControllerTest {
@@ -66,7 +67,7 @@ class PautaControllerTest {
         PautaController controller = new PautaController(pautaServiceMock, votoService);
 
         // ACT & ASSERT
-        ResponseStatusException exception = Assertions.assertThrows(
+        ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
                 () -> controller.criarPauta(request)
         );
@@ -158,6 +159,106 @@ class PautaControllerTest {
     }
 
     @Test
+    void votar_deveRetornar400_quandoCpfComCaracterInvalido() {
+        // ARRANGE
+        String titulo = "Pauta Teste";
+        String cpf = "12345abc900"; // caracteres inválidos
+        String escolha = "SIM";
+        VotoRequestDTO request = new VotoRequestDTO(cpf, escolha);
+
+        when(votoService.registrarVotoPorTitulo(titulo, cpf, escolha))
+                .thenThrow(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Request Body inválido ou malformado"));
+
+        // ACT
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> pautaController.votar(titulo, request));
+
+        // ASSERT
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
+        assertEquals("Request Body inválido ou malformado", ex.getReason());
+    }
+
+    @Test
+    void votar_deveRetornar400_quandoSessaoNaoAberta() {
+        // ARRANGE
+        String titulo = "Pauta Teste";
+        String cpf = "12345678900";
+        String escolha = "SIM";
+        VotoRequestDTO request = new VotoRequestDTO(cpf, escolha);
+
+        when(votoService.registrarVotoPorTitulo(titulo, cpf, escolha))
+                .thenThrow(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Sessão de votação não foi aberta"));
+
+        // ACT
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> pautaController.votar(titulo, request));
+
+        // ASSERT
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
+        assertEquals("Sessão de votação não foi aberta", ex.getReason());
+    }
+
+    @Test
+    void votar_deveRetornar400_quandoSessaoFechada() {
+        // ARRANGE
+        String titulo = "Pauta Teste";
+        String cpf = "12345678900";
+        String escolha = "SIM";
+        VotoRequestDTO request = new VotoRequestDTO(cpf, escolha);
+
+        when(votoService.registrarVotoPorTitulo(titulo, cpf, escolha))
+                .thenThrow(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Sessão de votação fechada"));
+
+        // ACT
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> pautaController.votar(titulo, request));
+
+        // ASSERT
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
+        assertEquals("Sessão de votação fechada", ex.getReason());
+    }
+
+    @Test
+    void votar_deveRetornar400_quandoEscolhaInvalida() {
+        // ARRANGE
+        String titulo = "Pauta Teste";
+        String cpf = "12345678900";
+        String escolha = "TALVEZ"; // inválido
+        VotoRequestDTO request = new VotoRequestDTO(cpf, escolha);
+
+        when(votoService.registrarVotoPorTitulo(titulo, cpf, escolha))
+                .thenThrow(new ResponseStatusException(HttpStatus.BAD_REQUEST, "A escolha deve ser 'SIM' ou 'NAO'"));
+
+        // ACT
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> pautaController.votar(titulo, request));
+
+        // ASSERT
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
+        assertEquals("A escolha deve ser 'SIM' ou 'NAO'", ex.getReason());
+    }
+
+    @Test
+    void votar_deveRetornar400_quandoEscolhaVazia() {
+        // ARRANGE
+        String titulo = "Pauta Teste";
+        String cpf = "12345678900";
+        String escolha = null; // obrigatório
+        VotoRequestDTO request = new VotoRequestDTO(cpf, escolha);
+
+        when(votoService.registrarVotoPorTitulo(titulo, cpf, escolha))
+                .thenThrow(new ResponseStatusException(HttpStatus.BAD_REQUEST, "A escolha do voto é obrigatória"));
+
+        // ACT
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> pautaController.votar(titulo, request));
+
+        // ASSERT
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
+        assertEquals("A escolha do voto é obrigatória", ex.getReason());
+    }
+
+    @Test
     void votar_deveRetornar401_quandoNaoAutorizado() {
         // ARRANGE
         String titulo = "Pauta Teste";
@@ -222,7 +323,7 @@ class PautaControllerTest {
 
     //region @Test - Resultado
     @Test
-    void resultado_deveRetornar200_quandoSucesso() {
+    void resultado_deveRetornar200_quandoSucessoAPROVADA() {
         // ARRANGE
         String titulo = "Pauta Teste";
         ResultadoVotacaoResponseDTO resultadoEsperado = new ResultadoVotacaoResponseDTO(
@@ -238,6 +339,52 @@ class PautaControllerTest {
         // ASSERT
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals(resultadoEsperado, response.getBody());
+        Assertions.assertNotNull(response.getBody());
+        assertEquals("APROVADA", response.getBody().resultado().status());
+        verify(votoService, times(1)).calcularResultadoPorTitulo(titulo);
+    }
+
+    @Test
+    void resultado_deveRetornar200_quandoSucessoREPROVADA() {
+        // ARRANGE
+        String titulo = "Pauta Teste";
+        ResultadoVotacaoResponseDTO resultadoEsperado = new ResultadoVotacaoResponseDTO(
+                titulo,
+                new ResultadoVotacaoResponseDTO.ResultadoDTO(0, 100, "REPROVADA")
+        );
+
+        when(votoService.calcularResultadoPorTitulo(titulo)).thenReturn(resultadoEsperado);
+
+        // ACT
+        ResponseEntity<ResultadoVotacaoResponseDTO> response = pautaController.resultado(titulo);
+
+        // ASSERT
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(resultadoEsperado, response.getBody());
+        Assertions.assertNotNull(response.getBody());
+        assertEquals("REPROVADA", response.getBody().resultado().status());
+        verify(votoService, times(1)).calcularResultadoPorTitulo(titulo);
+    }
+
+    @Test
+    void resultado_deveRetornar200_quandoSucessoEMPATE() {
+        // ARRANGE
+        String titulo = "Pauta Teste";
+        ResultadoVotacaoResponseDTO resultadoEsperado = new ResultadoVotacaoResponseDTO(
+                titulo,
+                new ResultadoVotacaoResponseDTO.ResultadoDTO(50, 50, "EMPATE")
+        );
+
+        when(votoService.calcularResultadoPorTitulo(titulo)).thenReturn(resultadoEsperado);
+
+        // ACT
+        ResponseEntity<ResultadoVotacaoResponseDTO> response = pautaController.resultado(titulo);
+
+        // ASSERT
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(resultadoEsperado, response.getBody());
+        Assertions.assertNotNull(response.getBody());
+        assertEquals("EMPATE", response.getBody().resultado().status());
         verify(votoService, times(1)).calcularResultadoPorTitulo(titulo);
     }
 
