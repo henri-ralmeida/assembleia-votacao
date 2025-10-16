@@ -12,7 +12,7 @@ API REST para **gerenciar pautas** e **registrar votos** de forma simples, valid
 
 - **Maven** – Ferramenta de Build e gerenciamento de dependências.
 
-- **Banco de dados H2** – Usado localmente para testes e salvo dentro da pasta `data` para persistência
+- **Banco de dados H2** – Usado localmente para testes e salvo dentro da pasta `data` garantindo que informações não sejam perdidas entre reinicializações do servidor.
 
 - **Swagger / OpenAPI** – Documentação interativa para testar endpoints de forma simples.
 
@@ -88,9 +88,9 @@ VotoRequestDTO request = new VotoRequestDTO(cpf, "SIM");
 ---
 
 ## **Request Body**
-| Campo  | Tipo   | Obrigatório | Descrição                                                           |
-|--------|--------|-------------|---------------------------------------------------------------------|
-| tituloPauta | String | Sim         | Devemos distribuir sacolinhas no Pet Place??                                      |
+| Campo         | Tipo   | Obrigatório | Descrição                                                           |
+|-------------- |--------|-------------|---------------------------------------------------------------------|
+| `tituloPauta` | String | Sim         | Devemos distribuir sacolinhas no Pet Place??                        |
 
 ## **Exemplo Request**
 ```json
@@ -102,11 +102,11 @@ VotoRequestDTO request = new VotoRequestDTO(cpf, "SIM");
 
 ## **Códigos de Retorno**
 
-| Código | Descrição                           | Exemplo de Retorno                                            |
-| ------ | ----------------------------------- |---------------------------------------------------------------|
+| Código | Descrição                           | Exemplo de Retorno                                                 |
+| ------ | ----------------------------------- |------------------------------------------------------------------- |
 | 201    | Pauta criada com sucesso            | `{ "tituloPauta": "Devemos distribuir sacolinhas no Pet Place?" }` |
 | 400    | O título é obrigatório              | `{ "tituloPauta": "O título da pauta é obrigatório" }`             |
-| 409    | Já existe uma pauta com esse título | `{ "error": "Já existe uma pauta com esse título" }`          |
+| 409    | Já existe uma pauta com esse título | `{ "error": "Já existe uma pauta com esse título" }`               |
 
 ---
 
@@ -118,8 +118,8 @@ VotoRequestDTO request = new VotoRequestDTO(cpf, "SIM");
 
 ## **Parâmetros**
 
-| Nome     | Local | Tipo   | Obrigatório | Descrição                        |
-| -------- | ----- | ------ | ----------- | -------------------------------- |
+| Nome          | Local | Tipo   | Obrigatório | Descrição                        |
+| ------------- | ----- | ------ | ----------- | -------------------------------- |
 | `tituloPauta` | Path  | String | Sim         | Título da pauta a ser consultada |
 
 
@@ -225,9 +225,9 @@ VotoRequestDTO request = new VotoRequestDTO(cpf, "SIM");
 ## Validações Gerais das 4 Rotas
 
 - CPF deve conter exatamente 11 dígitos.
-- Escolha do voto deve ser "SIM" ou "NAO".
+- Escolha do voto deve ser `"SIM"` ou `"NAO".`
 - Sessão deve estar aberta para aceitar votos.
-- Associado deve ser habilitado para votar ("status": "ABLE_TO_VOTE").
+- Associado deve ser habilitado para votar `("status": "ABLE_TO_VOTE")`.
 - Associado não pode votar mais de uma vez na mesma pauta.
 
 ---
@@ -245,15 +245,9 @@ VotoRequestDTO request = new VotoRequestDTO(cpf, "SIM");
 
 ---
 
-## Banco de Dados
-- Os dados de pautas e votos são persistidos em banco de dados local em arquivo, garantindo que informações não sejam perdidas entre reinicializações do servidor.
-- Recomenda-se backup periódico caso a API seja usada em produção.
-- Para ambientes de teste, os dados podem ser resetados ou populados automaticamente.
-- O formato do banco é transparente para a API; os endpoints continuam funcionando via JSON sem precisar acessar diretamente os arquivos.
-
 ## 📂 Exemplos de Banco de Dados
 
-### Tabela: Pauta
+### Tabela: 'PAUTA'
 | ID | ABERTURA            | DURACAO_MINUTOS | FECHAMENTO          | TITULO_PAUTA                                               |
 | -- |---------------------|-----------------|---------------------| ---------------------------------------------------------- |
 | 1  | 15/10/2025 21:41:31 | 10              | 15/10/2025 21:51:31 | Devemos distribuir sacolinhas no Pet Place?                |
@@ -261,8 +255,7 @@ VotoRequestDTO request = new VotoRequestDTO(cpf, "SIM");
 | 3  | null                | null            | null                | Segurança deve monitorar as áreas comuns por 24hrs?        |
 | 4  | null                | null            | null                | O horário permitido na piscina deve ser reduzido para 21h? |
 
-### Tabela: Voto
-
+### Tabela: 'VOTO'
 | ID | CPF_ID      | ESCOLHA | PAUTA_ID |
 |----|-------------|---------|----------|
 | 1  | 12345678900 | SIM     | 1        |
