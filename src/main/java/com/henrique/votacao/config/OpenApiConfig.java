@@ -13,8 +13,8 @@ public class OpenApiConfig {
     public OpenAPI customOpenAPI() {
         return new OpenAPI()
                 .info(new Info()
-                        .title("API de Votação")
+                        .title("API de Assembleia")
                         .version("1.0")
-                        .description("Documentação da API de Pautas e Votos"));
+                        .description("Documentação da API de Assembleia para Pautas e Votos"));
     }
 }

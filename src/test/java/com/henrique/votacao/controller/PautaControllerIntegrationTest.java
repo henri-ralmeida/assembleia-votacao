@@ -30,7 +30,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 @AutoConfigureMockMvc
 @Transactional
-class VotacaoControllerIntegrationTest {
+class PautaControllerIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -64,9 +64,9 @@ class VotacaoControllerIntegrationTest {
         String cpfValido = "12345678901";
 
         // ARRANGE & ASSERT
-        mockMvc.perform(post("/api/v1/votacoes/votos")
+        mockMvc.perform(post("/api/v1/pautas/" + pauta.getTitulo() + "/votos")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new VotoRequestDTO(pauta.getTitulo(), cpfValido, "SIM"))))
+                        .content(objectMapper.writeValueAsString(new VotoRequestDTO(cpfValido, "SIM"))))
                 .andExpect(status().isCreated());
     }
 
@@ -79,9 +79,9 @@ class VotacaoControllerIntegrationTest {
                 .thenReturn(Map.of("status", "UNABLE_TO_VOTE"));
 
         // ARRANGE & ASSERT
-        mockMvc.perform(post("/api/v1/votacoes/votos")
+        mockMvc.perform(post("/api/v1/pautas/" + pauta.getTitulo() + "/votos")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new VotoRequestDTO(pauta.getTitulo(), cpfInvalido, "SIM"))))
+                        .content(objectMapper.writeValueAsString(new VotoRequestDTO(cpfInvalido, "SIM"))))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -90,10 +90,10 @@ class VotacaoControllerIntegrationTest {
         long startTime = System.currentTimeMillis();
         IntStream.range(0, TOTAL_VOTOS).forEach(i -> {
             String associadoId = String.format("%011d", i);
-            VotoRequestDTO request = new VotoRequestDTO(pauta.getTitulo(), associadoId, "SIM");
+            VotoRequestDTO request = new VotoRequestDTO(associadoId, "SIM");
 
             try {
-                mockMvc.perform(post("/api/v1/votacoes/votos")
+                mockMvc.perform(post("/api/v1/pautas/" + pauta.getTitulo() + "/votos")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(request)))
                         .andExpect(status().isCreated());
