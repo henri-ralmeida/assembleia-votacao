@@ -187,15 +187,18 @@ VotoRequestDTO request = new VotoRequestDTO(cpf, "SIM");
 ---
 
 ## **Códigos de Retorno**
-| Código | Descrição                        | Exemplo de Retorno                                                                                                                     |
-| ------ |----------------------------------|----------------------------------------------------------------------------------------------------------------------------------------|
-| 201    | Voto registrado com sucesso      | `{ "mensagem": "Voto 'SIM' registrado com sucesso para pauta 'Devemos distribuir sacolinhas no Pet Place?' no CPF de '12345678900'" }` |
-| 400    | CPF inválido                     | `{ "cpf:" "O CPF deve conter exatamente 11 números" }`                                                                                 |
-| 400    | Sessão de votação não foi aberta | `{ "error:" "Sessão de votação não foi aberta" }`                                                                                      |
-| 400    | Sessão de votação fechada        | `{ "error:" "Sessão de votação fechada" }`                                                                                             |
-| 401    | Associado não autorizado a votar | `{ "error:" "Associado não autorizado a votar" }`                                                                                      |
-| 404    | Pauta não encontrada             | `{ "error:" "Pauta  não encontrada" }`                                                                                                 |
-| 409    | Associado já votou               | `{ "error:" "Associado já votou" }`                                                                                                    |
+| Código | Descrição                               | Exemplo de Retorno                                                                                                                     |
+| ------ |-----------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------|
+| 201    | Voto registrado com sucesso             | `{ "mensagem": "Voto 'SIM' registrado com sucesso para pauta 'Devemos distribuir sacolinhas no Pet Place?' no CPF de '12345678900'" }` |
+| 400    | CPF inválido                            | `{ "cpf:" "O CPF deve conter exatamente 11 números" }`                                                                                 |
+| 400    | CPF com caracter que não seja numérico  | `{ "error": "Request Body inválido ou malformado" }`                                                                                   |
+| 400    | Sessão de votação não foi aberta        | `{ "error:" "Sessão de votação não foi aberta" }`                                                                                      |
+| 400    | Sessão de votação fechada               | `{ "error:" "Sessão de votação fechada" }`                                                                                             |
+| 400    | Escolha do voto deve ser 'SIM' ou 'NAO' | `{ "escolha:" "A escolha deve ser 'SIM' ou 'NAO'" }`                                                                                   |
+| 400    | Escolha da voto é obrigatória           | `{ "escolha": "A escolha do voto é obrigatória" }`                                                                                     |
+| 401    | Associado não autorizado a votar        | `{ "error:" "Associado não autorizado a votar" }`                                                                                      |
+| 404    | Pauta não encontrada                    | `{ "error:" "Pauta  não encontrada" }`                                                                                                 |
+| 409    | Associado já votou                      | `{ "error:" "Associado já votou" }`                                                                                                    |
 
 ---
 
@@ -214,11 +217,11 @@ VotoRequestDTO request = new VotoRequestDTO(cpf, "SIM");
 ---
 
 ## **Códigos de Retorno**
-| Código | Descrição                       | Exemplo de Retorno (JSON)                                                                                                         |
-| ------ | ------------------------------- |-----------------------------------------------------------------------------------------------------------------------------------|
+| Código | Descrição                       | Exemplo de Retorno (JSON)                                                                                                              |
+| ------ | ------------------------------- |----------------------------------------------------------------------------------------------------------------------------------------|
 | 200    | Resultado retornado com sucesso | `{ "tituloPauta": "Devemos distribuir sacolinhas no Pet Place?", "resultado": { "sim": 36, "nao": 64, "status": "REPROVADA" } }`       |
 | 200    | Pauta sem nenhum voto           | `{ "tituloPauta": "Seguranca deve monitorar as areas comuns por 24hrs?", "resultado": { "sim": 0, "nao": 0, "status": "SEM_VOTOS" } }` |
-| 404    | Pauta não encontrada            | `{ "error:" "Pauta  não encontrada" }`                                                                                            |
+| 404    | Pauta não encontrada            | `{ "error:" "Pauta  não encontrada" }`                                                                                                 |
 
 ---
 
