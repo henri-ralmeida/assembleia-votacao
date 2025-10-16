@@ -50,9 +50,9 @@ class PautaControllerIntegrationTest {
     @BeforeEach
     void setup() {
         pauta = new Pauta();
-        pauta.setTitulo("Pauta Teste " + System.currentTimeMillis());
+        pauta.setTituloPauta("Pauta Teste " + System.currentTimeMillis());
         pauta = pautaService.criarPauta(pauta);
-        pautaService.abrirSessao(pauta.getTitulo(), 5);
+        pautaService.abrirSessao(pauta.getTituloPauta(), 5);
 
         when(cpfClient.verificarCpf())
                 .thenReturn(Map.of("status", "ABLE_TO_VOTE"));
@@ -63,10 +63,13 @@ class PautaControllerIntegrationTest {
         // ACCT
         String cpfValido = "12345678901";
 
-        // ARRANGE & ASSERT
-        mockMvc.perform(post("/api/v1/pautas/" + pauta.getTitulo() + "/votos")
+        // ARRANGE
+        VotoRequestDTO request = new VotoRequestDTO(cpfValido, "SIM");
+
+        // ASSERT
+        mockMvc.perform(post("/api/v1/pautas/" + pauta.getTituloPauta() + "/votos")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new VotoRequestDTO(cpfValido, "SIM"))))
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated());
     }
 
@@ -78,10 +81,13 @@ class PautaControllerIntegrationTest {
         when(cpfClient.verificarCpf())
                 .thenReturn(Map.of("status", "UNABLE_TO_VOTE"));
 
-        // ARRANGE & ASSERT
-        mockMvc.perform(post("/api/v1/pautas/" + pauta.getTitulo() + "/votos")
+        // ARRANGE
+        VotoRequestDTO request = new VotoRequestDTO(cpfInvalido, "SIM");
+
+        // ASSERT
+        mockMvc.perform(post("/api/v1/pautas/" + pauta.getTituloPauta() + "/votos")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new VotoRequestDTO(cpfInvalido, "SIM"))))
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -89,11 +95,11 @@ class PautaControllerIntegrationTest {
     void testeVotosMassivos() throws Exception {
         long startTime = System.currentTimeMillis();
         IntStream.range(0, TOTAL_VOTOS).forEach(i -> {
-            String associadoId = String.format("%011d", i);
-            VotoRequestDTO request = new VotoRequestDTO(associadoId, "SIM");
+            String cpf = String.format("%011d", i);
+            VotoRequestDTO request = new VotoRequestDTO(cpf, "SIM");
 
             try {
-                mockMvc.perform(post("/api/v1/pautas/" + pauta.getTitulo() + "/votos")
+                mockMvc.perform(post("/api/v1/pautas/" + pauta.getTituloPauta() + "/votos")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(request)))
                         .andExpect(status().isCreated());

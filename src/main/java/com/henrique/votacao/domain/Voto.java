@@ -10,7 +10,7 @@ public class Voto {
     private Long id;
 
     @Column(nullable = false)
-    private String associadoId;
+    private String cpfId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -27,8 +27,8 @@ public class Voto {
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
-    public String getAssociadoId() { return associadoId; }
-    public void setAssociadoId(String associadoId) { this.associadoId = associadoId; }
+    public String getCpfId() { return cpfId; }
+    public void setCpfId(String cpfId) { this.cpfId = cpfId; }
 
     public Escolha getEscolha() { return escolha; }
     public void setEscolha(Escolha escolha) { this.escolha = escolha; }

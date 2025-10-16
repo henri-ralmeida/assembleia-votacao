@@ -9,7 +9,7 @@ import java.util.Optional;
 
 @Repository
 public interface PautaRepository extends JpaRepository<Pauta, Long> {
-    Optional<Pauta> findByTitulo(String titulo);
+    Optional<Pauta> findByTituloPauta(String titulo);
 
-    boolean existsByTitulo(String titulo);
+    boolean existsByTituloPauta(String titulo);
 }

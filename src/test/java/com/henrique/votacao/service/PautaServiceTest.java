@@ -30,16 +30,16 @@ class PautaServiceTest {
     void criarPauta_deveSalvarPauta() {
         // ARRANGE
         Pauta pauta = new Pauta();
-        pauta.setTitulo("Nova Pauta");
+        pauta.setTituloPauta("Nova Pauta");
         when(pautaRepository.save(any(Pauta.class))).thenReturn(pauta);
-        when(pautaRepository.existsByTitulo("Nova Pauta")).thenReturn(false);
+        when(pautaRepository.existsByTituloPauta("Nova Pauta")).thenReturn(false);
 
         // ACT
         Pauta result = pautaService.criarPauta(pauta);
 
         // ASSERT
         assertNotNull(result);
-        assertEquals("Nova Pauta", result.getTitulo());
+        assertEquals("Nova Pauta", result.getTituloPauta());
         verify(pautaRepository, times(1)).save(pauta);
     }
 
@@ -48,8 +48,8 @@ class PautaServiceTest {
         // ARRANGE
         String titulo = "Pauta Teste";
         Pauta pauta = new Pauta();
-        pauta.setTitulo(titulo);
-        when(pautaRepository.findByTitulo(titulo)).thenReturn(Optional.of(pauta));
+        pauta.setTituloPauta(titulo);
+        when(pautaRepository.findByTituloPauta(titulo)).thenReturn(Optional.of(pauta));
         when(pautaRepository.save(any(Pauta.class))).thenReturn(pauta);
 
         // ACT
@@ -67,7 +67,7 @@ class PautaServiceTest {
     void abrirSessao_pautaNaoEncontrada_deveLancarExcecao() {
         // ARRANGE
         String titulo = "Pauta Inexistente";
-        when(pautaRepository.findByTitulo(titulo)).thenReturn(Optional.empty());
+        when(pautaRepository.findByTituloPauta(titulo)).thenReturn(Optional.empty());
 
         // ACT
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,

@@ -2,6 +2,7 @@ package com.henrique.votacao.service;
 
 import com.henrique.votacao.client.CpfClientFake;
 import com.henrique.votacao.domain.*;
+import com.henrique.votacao.dto.ResultadoVotacaoResponseDTO;
 import com.henrique.votacao.exception.BusinessException;
 import com.henrique.votacao.repository.VotoRepository;
 
@@ -35,24 +36,24 @@ public class VotoService {
 
     /**
      * Registra um voto para uma pauta pelo título
-     * @param titulo Título da pauta
-     * @param associadoId CPF ou ID do associado
+     * @param tituloPauta Título da pauta
+     * @param cpf CPF ou ID do associado
      * @param escolhaStr "SIM" ou "NAO"
      * @return Voto registrado
      * @throws ResponseStatusException retorna um HTTP 404 Not Found quando nao encontra a Pauta
      */
-    public Voto registrarVotoPorTitulo(String titulo, String associadoId, String escolhaStr) {
-        Pauta pauta = pautaService.buscarPorTitulo(titulo)
+    public Voto registrarVotoPorTitulo(String tituloPauta, String cpf, String escolhaStr) {
+        Pauta pauta = pautaService.buscarPorTitulo(tituloPauta)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pauta não encontrada"));
 
         validarSessaoAberta(pauta);
-        validarVotoUnico(associadoId, pauta.getId());
-        validarCpf(associadoId);
+        validarVotoUnico(cpf, pauta.getId());
+        validarCpf(cpf);
 
         Escolha escolha = parseEscolha(escolhaStr);
 
         Voto voto = new Voto();
-        voto.setAssociadoId(associadoId);
+        voto.setCpfId(cpf);
         voto.setEscolha(escolha);
         voto.setPauta(pauta);
 
@@ -61,12 +62,12 @@ public class VotoService {
 
     /**
      * Calcula o resultado da pauta pelo título, incluindo porcentagem e aprovação/reprovação
-     * @param titulo Título da pauta
+     * @param tituloPauta Título da pauta
      * @return Resultado da votação
      * @throws ResponseStatusException retorna um HTTP 404 Not Found quando nao encontra a Pauta
      */
-    public String calcularResultadoPorTitulo(String titulo) {
-        Pauta pauta = pautaService.buscarPorTitulo(titulo)
+    public ResultadoVotacaoResponseDTO calcularResultadoPorTitulo(String tituloPauta) {
+        Pauta pauta = pautaService.buscarPorTitulo(tituloPauta)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pauta não encontrada"));
 
         long votosSim = votoRepository.countByPautaAndEscolha(pauta, Escolha.SIM);
@@ -75,17 +76,26 @@ public class VotoService {
         long totalVotos = votosSim + votosNao;
 
         if (totalVotos == 0) {
-            return "Nenhum voto registrado para a pauta '" + pauta.getTitulo() + "'";
+            return new ResultadoVotacaoResponseDTO("Nenhum voto registrado para a pauta '" + pauta.getTituloPauta() + "'"
+                    , new ResultadoVotacaoResponseDTO.ResultadoDTO(0,0,"SEM_VOTOS"));
         }
 
-        double  percSim = (int) ((votosSim * 100) / totalVotos);
-        double  percNao = (int) ((votosNao * 100) / totalVotos);
+        double percSim = (int) ((votosSim * 100) / totalVotos);
+        double percNao = (int) ((votosNao * 100) / totalVotos);
 
-        String resultadoFinal = (votosSim > votosNao) ? "APROVADA" : "REPROVADA";
+        String statusFinal;
 
-        return String.format(
-                "%s: %.2f%% das pessoas votaram SIM, %.2f%% das pessoas votaram NAO, portanto a pauta está %s.",
-                pauta.getTitulo(), percSim, percNao, resultadoFinal
+        if (votosSim > votosNao) {
+            statusFinal = "APROVADA";
+        } else if (votosNao > votosSim) {
+            statusFinal = "REPROVADA";
+        } else {
+            statusFinal = "EMPATE";
+        }
+
+        return new ResultadoVotacaoResponseDTO(
+                pauta.getTituloPauta(),
+                new ResultadoVotacaoResponseDTO.ResultadoDTO(percSim, percNao, statusFinal)
         );
     }
 
@@ -110,27 +120,27 @@ public class VotoService {
 
     /**
      * Verifica se o associado já votou na pauta
-     * @param associadoId CPF do Associado
+     * @param cpf CPF do Associado
      * @param pautaId Id da Pauta
      * @throws ResponseStatusException retorna um HTTP 409 Conflict quando já uma pauta com o mesmo título
      */
-    private void validarVotoUnico(String associadoId, Long pautaId) {
-        if (votoRepository.existsByAssociadoIdAndPautaId(associadoId, pautaId)) {
+    private void validarVotoUnico(String cpf, Long pautaId) {
+        if (votoRepository.existsBycpfIdAndPautaId(cpf, pautaId)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Associado já votou");
         }
     }
 
     /**
      * Valida o CPF do associado usando o Client Fake
-     * @param associadoId CPF do associado
+     * @param cpf CPF do associado
      * @throws ResponseStatusException retorna um HTTP 401 Unathorized quando o associado não está autorizado a votar
      */
-    private void validarCpf(String associadoId) {
+    private void validarCpf(String cpf) {
         Map<String, String> resposta = cpfClient.verificarCpf();
         String status = resposta.get("status");
 
         if (!"ABLE_TO_VOTE".equalsIgnoreCase(status)) {
-            logger.warn("Associado não autorizado a votar: associadoID={}, status={}", associadoId, status);
+            logger.warn("Associado não autorizado a votar: cpf={}, status={}", cpf, status);
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Associado não autorizado a votar");
         }
     }

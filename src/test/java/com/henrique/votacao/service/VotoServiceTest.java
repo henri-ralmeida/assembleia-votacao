@@ -2,6 +2,7 @@ package com.henrique.votacao.service;
 
 import com.henrique.votacao.client.CpfClientFake;
 import com.henrique.votacao.domain.*;
+import com.henrique.votacao.dto.ResultadoVotacaoResponseDTO;
 import com.henrique.votacao.exception.*;
 import com.henrique.votacao.repository.VotoRepository;
 
@@ -44,12 +45,12 @@ class VotoServiceTest {
         // ARRANGE
         Pauta pauta = new Pauta();
         pauta.setId(1L);
-        pauta.setTitulo("Pauta Teste");
+        pauta.setTituloPauta("Pauta Teste");
         pauta.setAbertura(LocalDateTime.now().minusMinutes(1).format(FORMATADOR));
         pauta.setFechamento(LocalDateTime.now().plusMinutes(5).format(FORMATADOR));
 
         when(pautaService.buscarPorTitulo("Pauta Teste")).thenReturn(Optional.of(pauta));
-        when(votoRepository.existsByAssociadoIdAndPautaId("123", pauta.getId())).thenReturn(false);
+        when(votoRepository.existsBycpfIdAndPautaId("123", pauta.getId())).thenReturn(false);
         when(cpfClient.verificarCpf()).thenReturn(Map.of("status", "ABLE_TO_VOTE"));
         when(votoRepository.save(any(Voto.class))).thenAnswer(i -> i.getArguments()[0]);
 
@@ -58,7 +59,7 @@ class VotoServiceTest {
 
         // ASSERT
         assertNotNull(voto);
-        assertEquals("123", voto.getAssociadoId());
+        assertEquals("123", voto.getCpfId());
         assertEquals(Escolha.SIM, voto.getEscolha());
         assertNotNull(voto.getPauta());
         assertEquals(pauta.getId(), voto.getPauta().getId());
@@ -70,7 +71,7 @@ class VotoServiceTest {
         // ARRANGE
         Pauta pauta = new Pauta();
         pauta.setId(1L);
-        pauta.setTitulo("Pauta Teste");
+        pauta.setTituloPauta("Pauta Teste");
         pauta.setAbertura(LocalDateTime.now().minusMinutes(5).format(FORMATADOR));
         pauta.setFechamento(LocalDateTime.now().minusMinutes(1).format(FORMATADOR));
 
@@ -91,12 +92,12 @@ class VotoServiceTest {
         // ARRANGE
         Pauta pauta = new Pauta();
         pauta.setId(1L);
-        pauta.setTitulo("Pauta Teste");
+        pauta.setTituloPauta("Pauta Teste");
         pauta.setAbertura(LocalDateTime.now().minusMinutes(1).format(FORMATADOR));
         pauta.setFechamento(LocalDateTime.now().plusMinutes(5).format(FORMATADOR));
 
         when(pautaService.buscarPorTitulo("Pauta Teste")).thenReturn(Optional.of(pauta));
-        when(votoRepository.existsByAssociadoIdAndPautaId("123", pauta.getId())).thenReturn(true);
+        when(votoRepository.existsBycpfIdAndPautaId("123", pauta.getId())).thenReturn(true);
         when(cpfClient.verificarCpf()).thenReturn(Map.of("status", "ABLE_TO_VOTE"));
 
         // ACT
@@ -117,18 +118,19 @@ class VotoServiceTest {
         // ARRANGE
         Pauta pauta = new Pauta();
         pauta.setId(1L);
-        pauta.setTitulo("Pauta Teste");
+        pauta.setTituloPauta("Pauta Teste");
 
         when(pautaService.buscarPorTitulo("Pauta Teste")).thenReturn(Optional.of(pauta));
-        when(votoRepository.countByPautaAndEscolha(pauta, Escolha.SIM)).thenReturn(2L);
-        when(votoRepository.countByPautaAndEscolha(pauta, Escolha.NAO)).thenReturn(1L);
+        when(votoRepository.countByPautaAndEscolha(pauta, Escolha.SIM)).thenReturn(4L);
+        when(votoRepository.countByPautaAndEscolha(pauta, Escolha.NAO)).thenReturn(2L);
 
         // ACT
-        String resultado = votoService.calcularResultadoPorTitulo("Pauta Teste");
+        ResultadoVotacaoResponseDTO response = votoService.calcularResultadoPorTitulo("Pauta Teste");
 
         // ASSERT
-        assertTrue(resultado.contains("SIM"));
-        assertTrue(resultado.contains("NAO"));
-        assertTrue(resultado.contains("APROVADA") || resultado.contains("REPROVADA"));
+        assertEquals("Pauta Teste", response.tituloPauta());
+        assertEquals(66, response.resultado().sim());
+        assertEquals(33, response.resultado().nao());
+        assertEquals("APROVADA", response.resultado().status());
     }
 }

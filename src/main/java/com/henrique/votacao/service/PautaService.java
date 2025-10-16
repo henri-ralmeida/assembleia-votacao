@@ -32,9 +32,9 @@ public class PautaService {
      * @throws ResponseStatusException retorna um HTTP 409 Conflict quando já uma pauta com o mesmo título
      */
     public Pauta criarPauta(Pauta pauta) {
-        logger.info("Criando nova pauta: {}", pauta.getTitulo());
+        logger.info("Criando nova pauta: {}", pauta.getTituloPauta());
 
-        if (pautaRepository.existsByTitulo(pauta.getTitulo())) {
+        if (pautaRepository.existsByTituloPauta(pauta.getTituloPauta())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Já existe uma pauta com esse título");
         }
 
@@ -50,7 +50,7 @@ public class PautaService {
      * @throws ResponseStatusException retorna um HTTP 404 Not Found
      */
     public Pauta abrirSessao(String titulo, Integer duracaoMinutos) {
-        Pauta pauta = pautaRepository.findByTitulo(titulo)
+        Pauta pauta = pautaRepository.findByTituloPauta(titulo)
                 .orElseThrow(() -> {
                     logger.error("Pauta não encontrada: titulo={}", titulo);
                     return new ResponseStatusException(HttpStatus.NOT_FOUND, "Pauta não encontrada");
@@ -69,6 +69,7 @@ public class PautaService {
 
         pauta.setAbertura(agora.format(formatador));
         pauta.setFechamento(agora.plusMinutes(duracaoMinutos).format(formatador));
+        pauta.setDuracaoMinutos(duracaoMinutos);
 
         return pautaRepository.save(pauta);
     }
@@ -79,6 +80,6 @@ public class PautaService {
      * @return Optional com a pauta encontrada, ou vazio caso não exista
      */
     public Optional<Pauta> buscarPorTitulo(String titulo) {
-        return pautaRepository.findByTitulo(titulo);
+        return pautaRepository.findByTituloPauta(titulo);
     }
 }

@@ -3,9 +3,7 @@ package com.henrique.votacao.controller;
 import com.henrique.votacao.domain.Escolha;
 import com.henrique.votacao.domain.Pauta;
 import com.henrique.votacao.domain.Voto;
-import com.henrique.votacao.dto.AbrirSessaoRequestDTO;
-import com.henrique.votacao.dto.PautaRequestDTO;
-import com.henrique.votacao.dto.VotoRequestDTO;
+import com.henrique.votacao.dto.*;
 import com.henrique.votacao.service.PautaService;
 import com.henrique.votacao.service.VotoService;
 
@@ -40,27 +38,27 @@ class PautaControllerTest {
     @Test
     void criarPauta_deveRetornar201_quandoSucesso() {
         // ARRANGE
-        PautaRequestDTO request = new PautaRequestDTO("Nova Pauta");
+        PautaDTO request = new PautaDTO("Nova Pauta");
         Pauta criada = new Pauta();
         criada.setId(1L);
-        criada.setTitulo(request.titulo());
+        criada.setTituloPauta(request.tituloPauta());
 
         when(pautaService.criarPauta(any(Pauta.class))).thenReturn(criada);
 
         // ACT
-        ResponseEntity<PautaRequestDTO> response = pautaController.criarPauta(request);
+        ResponseEntity<PautaDTO> response = pautaController.criarPauta(request);
 
         // ASSERT
         assertEquals(HttpStatus.CREATED, response.getStatusCode());
         Assertions.assertNotNull(response.getBody());
-        assertEquals(request.titulo(), response.getBody().titulo());
+        assertEquals(request.tituloPauta(), response.getBody().tituloPauta());
         verify(pautaService, times(1)).criarPauta(any(Pauta.class));
     }
 
     @Test
     void criarPauta_deveRetornar400_quandoTituloVazio() {
         // ARRANGE
-        PautaRequestDTO request = new PautaRequestDTO("");
+        PautaDTO request = new PautaDTO("");
         PautaService pautaServiceMock = mock(PautaService.class);
         when(pautaServiceMock.criarPauta(any()))
                 .thenThrow(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Título é obrigatório"));
@@ -78,7 +76,7 @@ class PautaControllerTest {
     @Test
     void criarPauta_deveRetornar409_quandoTituloDuplicado() {
         // ARRANGE
-        PautaRequestDTO request = new PautaRequestDTO("Duplicada");
+        PautaDTO request = new PautaDTO("Duplicada");
         when(pautaService.criarPauta(any(Pauta.class)))
                 .thenThrow(new ResponseStatusException(HttpStatus.CONFLICT));
 
@@ -97,7 +95,7 @@ class PautaControllerTest {
         // ARRANGE
         String titulo = "Pauta Teste";
         Pauta pauta = new Pauta();
-        pauta.setTitulo(titulo);
+        pauta.setTituloPauta(titulo);
         pauta.setId(1L);
 
         when(pautaService.buscarPorTitulo(titulo)).thenReturn(Optional.of(pauta));
@@ -106,7 +104,7 @@ class PautaControllerTest {
         AbrirSessaoRequestDTO request = new AbrirSessaoRequestDTO(5);
 
         // ACT
-        ResponseEntity<String> response = pautaController.abrirSessao(titulo, request);
+        ResponseEntity<AbrirSessaoResponseDTO> response = pautaController.abrirSessao(titulo, request);
 
         // ASSERT
         assertEquals(HttpStatus.OK, response.getStatusCode());
@@ -134,39 +132,41 @@ class PautaControllerTest {
     @Test
     void votar_deveRetornar201_quandoSucesso() {
         // ARRANGE
-        String titulo = "Pauta Teste";
-        String associadoId = "12345678900";
+        String tituloPauta = "Pauta Teste";
+        String cpf = "12345678900";
         String escolha = "SIM";
 
-        VotoRequestDTO request = new VotoRequestDTO(associadoId, escolha);
+        VotoRequestDTO request = new VotoRequestDTO(cpf, escolha);
 
         Voto voto = new Voto();
-        voto.setAssociadoId(associadoId);
+        voto.setCpfId(cpf);
         voto.setEscolha(Escolha.SIM);
 
-        when(votoService.registrarVotoPorTitulo(titulo, associadoId, escolha)).thenReturn(voto);
+        Pauta pauta = new Pauta();
+        pauta.setTituloPauta(tituloPauta);
+        voto.setPauta(pauta);
+
+        when(votoService.registrarVotoPorTitulo(tituloPauta, cpf, escolha)).thenReturn(voto);
 
         // ACT
-        ResponseEntity<VotoRequestDTO> response = pautaController.votar(titulo, request);
+        ResponseEntity<VotoResponseDTO> response = pautaController.votar(tituloPauta, request);
 
         // ASSERT
         assertEquals(HttpStatus.CREATED, response.getStatusCode());
         Assertions.assertNotNull(response.getBody());
-        assertEquals(associadoId, response.getBody().associadoId());
-        assertEquals(escolha, response.getBody().escolha());
-        verify(votoService, times(1)).registrarVotoPorTitulo(titulo, associadoId, escolha);
+        verify(votoService, times(1)).registrarVotoPorTitulo(tituloPauta, cpf, escolha);
     }
 
     @Test
     void votar_deveRetornar401_quandoNaoAutorizado() {
         // ARRANGE
         String titulo = "Pauta Teste";
-        String associadoId = "00000000000";
+        String cpf = "00000000000";
         String escolha = "SIM";
 
-        VotoRequestDTO request = new VotoRequestDTO(associadoId, escolha);
+        VotoRequestDTO request = new VotoRequestDTO(cpf, escolha);
 
-        when(votoService.registrarVotoPorTitulo(titulo, associadoId, escolha))
+        when(votoService.registrarVotoPorTitulo(titulo, cpf, escolha))
                 .thenThrow(new ResponseStatusException(HttpStatus.UNAUTHORIZED));
 
         // ACT & ASSERT
@@ -181,13 +181,13 @@ class PautaControllerTest {
     void votar_deveRetornar404_quandoPautaNaoEncontrada() {
         // ARRANGE
         String titulo = "NaoExiste";
-        String associadoId = "12345678900";
+        String cpf = "12345678900";
         String escolha = "SIM";
 
-        VotoRequestDTO request = new VotoRequestDTO(associadoId, escolha);
+        VotoRequestDTO request = new VotoRequestDTO(cpf, escolha);
 
         // ACT
-        when(votoService.registrarVotoPorTitulo(titulo, associadoId, escolha))
+        when(votoService.registrarVotoPorTitulo(titulo, cpf, escolha))
                 .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND));
 
         // ASSERT
@@ -202,13 +202,13 @@ class PautaControllerTest {
     void votar_deveRetornar409_quandoAssociadoJaVotou() {
         // ARRANGE
         String titulo = "Pauta Teste";
-        String associadoId = "12345678900";
+        String cpf = "12345678900";
         String escolha = "SIM";
 
-        VotoRequestDTO request = new VotoRequestDTO(associadoId, escolha);
+        VotoRequestDTO request = new VotoRequestDTO(cpf, escolha);
 
         // ACT
-        when(votoService.registrarVotoPorTitulo(titulo, associadoId, escolha))
+        when(votoService.registrarVotoPorTitulo(titulo, cpf, escolha))
                 .thenThrow(new ResponseStatusException(HttpStatus.CONFLICT));
 
         // ASSERT
@@ -225,12 +225,15 @@ class PautaControllerTest {
     void resultado_deveRetornar200_quandoSucesso() {
         // ARRANGE
         String titulo = "Pauta Teste";
-        String resultadoEsperado = "100% SIM, 0% NAO, APROVADA";
+        ResultadoVotacaoResponseDTO resultadoEsperado = new ResultadoVotacaoResponseDTO(
+                titulo,
+                new ResultadoVotacaoResponseDTO.ResultadoDTO(100, 0, "APROVADA")
+        );
 
         when(votoService.calcularResultadoPorTitulo(titulo)).thenReturn(resultadoEsperado);
 
         // ACT
-        ResponseEntity<String> response = pautaController.resultado(titulo);
+        ResponseEntity<ResultadoVotacaoResponseDTO> response = pautaController.resultado(titulo);
 
         // ASSERT
         assertEquals(HttpStatus.OK, response.getStatusCode());
