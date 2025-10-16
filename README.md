@@ -244,8 +244,8 @@ VotoRequestDTO request = new VotoRequestDTO(cpf, "SIM");
     - `409 Conflict` — conflito de negócio (ex.: associado já votou)
 
 ---
-
-## 📂 Exemplos de Banco de Dados
+ 
+## 📂 Exemplos dos valores do Banco de Dados H2
 
 ### Tabela: 'PAUTA'
 | ID | ABERTURA            | DURACAO_MINUTOS | FECHAMENTO          | TITULO_PAUTA                                               |
