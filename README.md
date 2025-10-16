@@ -12,9 +12,9 @@ API REST para **gerenciar pautas** e **registrar votos** de forma simples, valid
 
 - **Maven** – Ferramenta de build e gerenciamento de dependências.
 
-- **Banco de dados H2** – usado em localmente para testes e salvo dentro da pasta `data` para persistência
+- **Banco de dados H2** – Usado em localmente para testes e salvo dentro da pasta `data` para persistência
 
-- **Swagger / OpenAPI** – documentação interativa para testar endpoints de forma simples.
+- **Swagger / OpenAPI** – Documentação interativa para testar endpoints de forma simples.
 
 ---
 
