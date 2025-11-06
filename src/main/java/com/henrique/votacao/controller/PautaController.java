@@ -20,7 +20,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
-@Tag(name = "Pauta", description = "Endpoints para gerenciamento de Pautas e Votações em uma Assembleia")
+@Tag(name = "Assembleia", description = "Endpoints para gerenciamento de Pautas e Votações em uma Assembleia")
 @RestController
 @RequestMapping("/api/v1/pautas")
 public class PautaController {
