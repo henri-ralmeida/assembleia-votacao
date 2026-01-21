@@ -6,6 +6,10 @@
 .idea/
 *.iml
 *.iws
+bin/
+.project
+.classpath
+.settings/
 
 # Maven
 /target/
