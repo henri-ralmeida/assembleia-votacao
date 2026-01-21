@@ -8,6 +8,7 @@ data:
   spring.datasource.driver-class-name: "org.h2.Driver"
   spring.h2.console.enabled: "true"
   spring.h2.console.path: "/h2-console"
+  spring.h2.console.settings.web-allow-others: "true"
   spring.jpa.hibernate.ddl-auto: "update"
   spring.jpa.show-sql: "false"
   launcher.ui.disabled: "true"
