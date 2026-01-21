@@ -1,9 +1,13 @@
 package com.henrique.votacao.controller;
 
-import com.henrique.votacao.domain.Escolha;
-import com.henrique.votacao.domain.Pauta;
-import com.henrique.votacao.domain.Voto;
-import com.henrique.votacao.dto.*;
+import com.henrique.votacao.domain.model.voto.Escolha;
+import com.henrique.votacao.domain.model.pauta.Pauta;
+import com.henrique.votacao.domain.model.pauta.TituloPauta;
+import com.henrique.votacao.domain.model.voto.Voto;
+import com.henrique.votacao.domain.model.voto.Cpf;
+import com.henrique.votacao.domain.exception.*;
+import com.henrique.votacao.application.dto.request.*;
+import com.henrique.votacao.application.dto.response.*;
 import com.henrique.votacao.service.PautaService;
 import com.henrique.votacao.service.VotoService;
 
@@ -14,12 +18,12 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
 
 class PautaControllerTest {
@@ -40,9 +44,8 @@ class PautaControllerTest {
     void criarPauta_deveRetornar201_quandoSucesso() {
         // ARRANGE
         PautaDTO request = new PautaDTO("Nova Pauta");
-        Pauta criada = new Pauta();
-        criada.setId(1L);
-        criada.setTituloPauta(request.tituloPauta());
+        TituloPauta titulo = new TituloPauta("Nova Pauta");
+        Pauta criada = new Pauta(titulo);
 
         when(pautaService.criarPauta(any(Pauta.class))).thenReturn(criada);
 
@@ -62,16 +65,16 @@ class PautaControllerTest {
         PautaDTO request = new PautaDTO("");
         PautaService pautaServiceMock = mock(PautaService.class);
         when(pautaServiceMock.criarPauta(any()))
-                .thenThrow(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Título é obrigatório"));
+                .thenThrow(new IllegalArgumentException("O título da pauta não pode ser nulo ou vazio"));
 
         PautaController controller = new PautaController(pautaServiceMock, votoService);
 
         // ACT & ASSERT
-        ResponseStatusException exception = assertThrows(
-                ResponseStatusException.class,
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
                 () -> controller.criarPauta(request)
         );
-        assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
+        assertEquals("O título da pauta não pode ser nulo ou vazio", exception.getMessage());
     }
 
     @Test
@@ -79,14 +82,11 @@ class PautaControllerTest {
         // ARRANGE
         PautaDTO request = new PautaDTO("Duplicada");
         when(pautaService.criarPauta(any(Pauta.class)))
-                .thenThrow(new ResponseStatusException(HttpStatus.CONFLICT));
+                .thenThrow(new PautaDuplicadaException("Duplicada"));
 
         // ACT & ASSERT
-        try {
-            pautaController.criarPauta(request);
-        } catch (ResponseStatusException ex) {
-            assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
-        }
+        assertThrows(PautaDuplicadaException.class,
+                () -> pautaController.criarPauta(request));
     }
     //endregion
 
@@ -95,9 +95,8 @@ class PautaControllerTest {
     void abrirSessao_deveRetornar200_quandoSucesso() {
         // ARRANGE
         String titulo = "Pauta Teste";
-        Pauta pauta = new Pauta();
-        pauta.setTituloPauta(titulo);
-        pauta.setId(1L);
+        TituloPauta tituloPauta = new TituloPauta(titulo);
+        Pauta pauta = new Pauta(tituloPauta);
 
         when(pautaService.buscarPorTitulo(titulo)).thenReturn(Optional.of(pauta));
         when(pautaService.abrirSessao(eq(titulo), anyInt())).thenReturn(pauta);
@@ -121,11 +120,8 @@ class PautaControllerTest {
         AbrirSessaoRequestDTO request = new AbrirSessaoRequestDTO(5);
 
         // ACT & ASSERT
-        try {
-            pautaController.abrirSessao(titulo, request);
-        } catch (ResponseStatusException ex) {
-            assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
-        }
+        assertThrows(PautaNaoEncontradaException.class,
+                () -> pautaController.abrirSessao(titulo, request));
     }
     //endregion
 
@@ -139,13 +135,11 @@ class PautaControllerTest {
 
         VotoRequestDTO request = new VotoRequestDTO(cpf, escolha);
 
-        Voto voto = new Voto();
-        voto.setCpfId(cpf);
-        voto.setEscolha(Escolha.SIM);
-
-        Pauta pauta = new Pauta();
-        pauta.setTituloPauta(tituloPauta);
-        voto.setPauta(pauta);
+        TituloPauta titulo = new TituloPauta(tituloPauta);
+        Pauta pauta = new Pauta(titulo);
+        
+        Cpf cpfObj = new Cpf(cpf);
+        Voto voto = new Voto(cpfObj, Escolha.SIM, pauta);
 
         when(votoService.registrarVotoPorTitulo(tituloPauta, cpf, escolha)).thenReturn(voto);
 
@@ -167,15 +161,13 @@ class PautaControllerTest {
         VotoRequestDTO request = new VotoRequestDTO(cpf, escolha);
 
         when(votoService.registrarVotoPorTitulo(titulo, cpf, escolha))
-                .thenThrow(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Request Body inválido ou malformado"));
+                .thenThrow(new IllegalArgumentException("Request Body inválido ou malformado"));
 
-        // ACT
-        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+        // ACT & ASSERT
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
                 () -> pautaController.votar(titulo, request));
 
-        // ASSERT
-        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
-        assertEquals("Request Body inválido ou malformado", ex.getReason());
+        assertEquals("Request Body inválido ou malformado", ex.getMessage());
     }
 
     @Test
@@ -187,15 +179,13 @@ class PautaControllerTest {
         VotoRequestDTO request = new VotoRequestDTO(cpf, escolha);
 
         when(votoService.registrarVotoPorTitulo(titulo, cpf, escolha))
-                .thenThrow(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Sessão de votação não foi aberta"));
+                .thenThrow(new SessaoNaoAbertaException());
 
-        // ACT
-        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+        // ACT & ASSERT
+        SessaoNaoAbertaException ex = assertThrows(SessaoNaoAbertaException.class,
                 () -> pautaController.votar(titulo, request));
 
-        // ASSERT
-        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
-        assertEquals("Sessão de votação não foi aberta", ex.getReason());
+        assertTrue(ex.getMessage().contains("não foi aberta"));
     }
 
     @Test
@@ -207,15 +197,13 @@ class PautaControllerTest {
         VotoRequestDTO request = new VotoRequestDTO(cpf, escolha);
 
         when(votoService.registrarVotoPorTitulo(titulo, cpf, escolha))
-                .thenThrow(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Sessão de votação fechada"));
+                .thenThrow(new SessaoFechadaException());
 
-        // ACT
-        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+        // ACT & ASSERT
+        SessaoFechadaException ex = assertThrows(SessaoFechadaException.class,
                 () -> pautaController.votar(titulo, request));
 
-        // ASSERT
-        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
-        assertEquals("Sessão de votação fechada", ex.getReason());
+        assertTrue(ex.getMessage().contains("fechada"));
     }
 
     @Test
@@ -227,15 +215,13 @@ class PautaControllerTest {
         VotoRequestDTO request = new VotoRequestDTO(cpf, escolha);
 
         when(votoService.registrarVotoPorTitulo(titulo, cpf, escolha))
-                .thenThrow(new ResponseStatusException(HttpStatus.BAD_REQUEST, "A escolha deve ser 'SIM' ou 'NAO'"));
+                .thenThrow(new IllegalArgumentException("A escolha deve ser 'SIM' ou 'NAO'"));
 
-        // ACT
-        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+        // ACT & ASSERT
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
                 () -> pautaController.votar(titulo, request));
 
-        // ASSERT
-        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
-        assertEquals("A escolha deve ser 'SIM' ou 'NAO'", ex.getReason());
+        assertEquals("A escolha deve ser 'SIM' ou 'NAO'", ex.getMessage());
     }
 
     @Test
@@ -247,15 +233,13 @@ class PautaControllerTest {
         VotoRequestDTO request = new VotoRequestDTO(cpf, escolha);
 
         when(votoService.registrarVotoPorTitulo(titulo, cpf, escolha))
-                .thenThrow(new ResponseStatusException(HttpStatus.BAD_REQUEST, "A escolha do voto é obrigatória"));
+                .thenThrow(new IllegalArgumentException("A escolha do voto é obrigatória"));
 
-        // ACT
-        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+        // ACT & ASSERT
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
                 () -> pautaController.votar(titulo, request));
 
-        // ASSERT
-        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
-        assertEquals("A escolha do voto é obrigatória", ex.getReason());
+        assertEquals("A escolha do voto é obrigatória", ex.getMessage());
     }
 
     @Test
@@ -268,14 +252,11 @@ class PautaControllerTest {
         VotoRequestDTO request = new VotoRequestDTO(cpf, escolha);
 
         when(votoService.registrarVotoPorTitulo(titulo, cpf, escolha))
-                .thenThrow(new ResponseStatusException(HttpStatus.UNAUTHORIZED));
+                .thenThrow(new AssociadoNaoAutorizadoException());
 
         // ACT & ASSERT
-        try {
-            pautaController.votar(titulo, request);
-        } catch (ResponseStatusException ex) {
-            assertEquals(HttpStatus.UNAUTHORIZED, ex.getStatusCode());
-        }
+        assertThrows(AssociadoNaoAutorizadoException.class,
+                () -> pautaController.votar(titulo, request));
     }
 
     @Test
@@ -287,16 +268,12 @@ class PautaControllerTest {
 
         VotoRequestDTO request = new VotoRequestDTO(cpf, escolha);
 
-        // ACT
         when(votoService.registrarVotoPorTitulo(titulo, cpf, escolha))
-                .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND));
+                .thenThrow(new PautaNaoEncontradaException(titulo));
 
-        // ASSERT
-        try {
-            pautaController.votar(titulo, request);
-        } catch (ResponseStatusException ex) {
-            assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
-        }
+        // ACT & ASSERT
+        assertThrows(PautaNaoEncontradaException.class,
+                () -> pautaController.votar(titulo, request));
     }
 
     @Test
@@ -308,16 +285,12 @@ class PautaControllerTest {
 
         VotoRequestDTO request = new VotoRequestDTO(cpf, escolha);
 
-        // ACT
         when(votoService.registrarVotoPorTitulo(titulo, cpf, escolha))
-                .thenThrow(new ResponseStatusException(HttpStatus.CONFLICT));
+                .thenThrow(new VotoDuplicadoException(cpf));
 
-        // ASSERT
-        try {
-            pautaController.votar(titulo, request);
-        } catch (ResponseStatusException ex) {
-            assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
-        }
+        // ACT & ASSERT
+        assertThrows(VotoDuplicadoException.class,
+                () -> pautaController.votar(titulo, request));
     }
     //endregion
 
@@ -393,16 +366,12 @@ class PautaControllerTest {
         // ARRANGE
         String titulo = "NaoExiste";
 
-        // ACT
         when(votoService.calcularResultadoPorTitulo(titulo))
-                .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND));
+                .thenThrow(new PautaNaoEncontradaException(titulo));
 
-        // ASSERT
-        try {
-            pautaController.resultado(titulo);
-        } catch (ResponseStatusException ex) {
-            assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
-        }
+        // ACT & ASSERT
+        assertThrows(PautaNaoEncontradaException.class,
+                () -> pautaController.resultado(titulo));
     }
     //endregion
 }

@@ -1,20 +1,21 @@
 package com.henrique.votacao.service;
 
-import com.henrique.votacao.client.CpfClientFake;
-import com.henrique.votacao.domain.*;
-import com.henrique.votacao.dto.ResultadoVotacaoResponseDTO;
+import com.henrique.votacao.infrastructure.client.CpfClientFake;
+import com.henrique.votacao.domain.exception.*;
+import com.henrique.votacao.domain.model.associado.StatusVotacao;
+import com.henrique.votacao.domain.model.pauta.Pauta;
+import com.henrique.votacao.domain.model.voto.Cpf;
+import com.henrique.votacao.domain.model.voto.Escolha;
+import com.henrique.votacao.domain.model.voto.Voto;
+import com.henrique.votacao.application.dto.response.ResultadoVotacaoResponseDTO;
 import com.henrique.votacao.exception.BusinessException;
 import com.henrique.votacao.repository.VotoRepository;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.Map;
 
 @Service
@@ -26,8 +27,6 @@ public class VotoService {
     private final VotoRepository votoRepository;
     private final CpfClientFake cpfClient;
 
-    private static final DateTimeFormatter FORMATADOR = DateTimeFormatter.ofPattern("dd/MM/yyyy - HH'h'mm'm'ss's'");
-
     public VotoService(PautaService pautaService, VotoRepository votoRepository, CpfClientFake cpfClient) {
         this.pautaService = pautaService;
         this.votoRepository = votoRepository;
@@ -37,25 +36,23 @@ public class VotoService {
     /**
      * Registra um voto para uma pauta pelo título
      * @param tituloPauta Título da pauta
-     * @param cpf CPF ou ID do associado
+     * @param cpfNumero CPF ou ID do associado
      * @param escolhaStr "SIM" ou "NAO"
      * @return Voto registrado
-     * @throws ResponseStatusException retorna um HTTP 404 Not Found quando nao encontra a Pauta
+     * @throws PautaNaoEncontradaException quando a pauta não é encontrada
      */
-    public Voto registrarVotoPorTitulo(String tituloPauta, String cpf, String escolhaStr) {
+    public Voto registrarVotoPorTitulo(String tituloPauta, String cpfNumero, String escolhaStr) {
         Pauta pauta = pautaService.buscarPorTitulo(tituloPauta)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pauta não encontrada"));
+                .orElseThrow(() -> new PautaNaoEncontradaException(tituloPauta));
 
         validarSessaoAberta(pauta);
-        validarVotoUnico(cpf, pauta.getId());
-        validarCpf(cpf);
+        validarVotoUnico(cpfNumero, pauta.getId());
+        validarCpf(cpfNumero);
 
+        Cpf cpf = new Cpf(cpfNumero);
         Escolha escolha = parseEscolha(escolhaStr);
 
-        Voto voto = new Voto();
-        voto.setCpfId(cpf);
-        voto.setEscolha(escolha);
-        voto.setPauta(pauta);
+        Voto voto = new Voto(cpf, escolha, pauta);
 
         return votoRepository.save(voto);
     }
@@ -64,11 +61,11 @@ public class VotoService {
      * Calcula o resultado da pauta pelo título, incluindo porcentagem e aprovação/reprovação
      * @param tituloPauta Título da pauta
      * @return Resultado da votação
-     * @throws ResponseStatusException retorna um HTTP 404 Not Found quando nao encontra a Pauta
+     * @throws PautaNaoEncontradaException quando a pauta não é encontrada
      */
     public ResultadoVotacaoResponseDTO calcularResultadoPorTitulo(String tituloPauta) {
         Pauta pauta = pautaService.buscarPorTitulo(tituloPauta)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pauta não encontrada"));
+                .orElseThrow(() -> new PautaNaoEncontradaException(tituloPauta));
 
         long votosSim = votoRepository.countByPautaAndEscolha(pauta, Escolha.SIM);
         long votosNao = votoRepository.countByPautaAndEscolha(pauta, Escolha.NAO);
@@ -100,21 +97,18 @@ public class VotoService {
     }
 
     /**
-     * Valida se a sessão da pauta está aberta usando a string formatada
+     * Valida se a sessão da pauta está aberta
      * @param pauta Pauta
-     * @throws ResponseStatusException retorna um HTTP 404 Not Found quando nao encontra a Pauta
+     * @throws SessaoNaoAbertaException se a sessão não foi aberta
+     * @throws SessaoFechadaException se a sessão já foi fechada
      */
     private void validarSessaoAberta(Pauta pauta) {
-        if (pauta.getAbertura() == null || pauta.getFechamento() == null) {
-            throw new BusinessException("Sessão de votação não foi aberta");
+        if (!pauta.temSessaoAberta()) {
+            throw new SessaoNaoAbertaException();
         }
 
-        LocalDateTime abertura = LocalDateTime.parse(pauta.getAbertura(), FORMATADOR);
-        LocalDateTime fechamento = LocalDateTime.parse(pauta.getFechamento(), FORMATADOR);
-        LocalDateTime agora = LocalDateTime.now();
-
-        if (agora.isBefore(abertura) || agora.isAfter(fechamento)) {
-            throw new BusinessException("Sessão de votação fechada");
+        if (!pauta.podeReceberVoto()) {
+            throw new SessaoFechadaException();
         }
     }
 
@@ -122,18 +116,18 @@ public class VotoService {
      * Verifica se o associado já votou na pauta
      * @param cpf CPF do Associado
      * @param pautaId Id da Pauta
-     * @throws ResponseStatusException retorna um HTTP 409 Conflict quando já uma pauta com o mesmo título
+     * @throws VotoDuplicadoException se o associado já votou
      */
     private void validarVotoUnico(String cpf, Long pautaId) {
         if (votoRepository.existsBycpfIdAndPautaId(cpf, pautaId)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Associado já votou");
+            throw new VotoDuplicadoException(cpf);
         }
     }
 
     /**
      * Valida o CPF do associado usando o Client Fake
      * @param cpf CPF do associado
-     * @throws ResponseStatusException retorna um HTTP 401 Unathorized quando o associado não está autorizado a votar
+     * @throws AssociadoNaoAutorizadoException quando o associado não está autorizado a votar
      */
     private void validarCpf(String cpf) {
         Map<String, String> resposta = cpfClient.verificarCpf();
@@ -141,7 +135,7 @@ public class VotoService {
 
         if (!"ABLE_TO_VOTE".equalsIgnoreCase(status)) {
             logger.warn("Associado não autorizado a votar: cpf={}, status={}", cpf, status);
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Associado não autorizado a votar");
+            throw new AssociadoNaoAutorizadoException(cpf);
         }
     }
 

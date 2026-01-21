@@ -1,8 +1,11 @@
 package com.henrique.votacao.controller;
 
-import com.henrique.votacao.domain.Pauta;
-import com.henrique.votacao.domain.Voto;
-import com.henrique.votacao.dto.*;
+import com.henrique.votacao.domain.model.pauta.Pauta;
+import com.henrique.votacao.domain.model.pauta.TituloPauta;
+import com.henrique.votacao.domain.model.voto.Voto;
+import com.henrique.votacao.domain.exception.PautaNaoEncontradaException;
+import com.henrique.votacao.application.dto.request.*;
+import com.henrique.votacao.application.dto.response.*;
 import com.henrique.votacao.service.*;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -18,7 +21,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 
 @Tag(name = "Assembleia", description = "Endpoints para gerenciamento de Pautas e Votações em uma Assembleia")
 @RestController
@@ -45,8 +47,8 @@ public class PautaController {
     public ResponseEntity<PautaDTO> criarPauta(@RequestBody @Valid PautaDTO request) {
         logger.info("Recebida requisição para criar pauta: {}", request.tituloPauta());
 
-        Pauta pauta = new Pauta();
-        pauta.setTituloPauta(request.tituloPauta());
+        TituloPauta titulo = new TituloPauta(request.tituloPauta());
+        Pauta pauta = new Pauta(titulo);
 
         Pauta criada = pautaService.criarPauta(pauta);
 
@@ -69,7 +71,7 @@ public class PautaController {
         logger.info("Requisição para abrir sessão: titulo={}, duracaoMinutos={}", tituloPauta, request.duracaoMinutos());
 
         Pauta pauta = pautaService.buscarPorTitulo(tituloPauta)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pauta não encontrada"));
+                .orElseThrow(() -> new PautaNaoEncontradaException(tituloPauta));
 
         pautaService.abrirSessao(pauta.getTituloPauta(), request.duracaoMinutos());
 
