@@ -1,0 +1,127 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: app-service
+  namespace: assembleia-votacao
+spec:
+  selector:
+    app: votacao-api
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+  type: LoadBalancer
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: votacao-api
+  namespace: assembleia-votacao
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: votacao-api
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: votacao-api
+    spec:
+      containers:
+      - name: api
+        image: votacao-api:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+        env:
+        - name: SPRING_DATASOURCE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: spring.datasource.url
+        - name: SPRING_DATASOURCE_DRIVER_CLASS_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: spring.datasource.driver-class-name
+        - name: SPRING_DATASOURCE_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: app-secret
+              key: spring.datasource.username
+        - name: SPRING_DATASOURCE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: app-secret
+              key: spring.datasource.password
+        - name: SPRING_JPA_HIBERNATE_DDL_AUTO
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: spring.jpa.hibernate.ddl-auto
+        - name: SPRING_JPA_SHOW_SQL
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: spring.jpa.show-sql
+        - name: SPRING_H2_CONSOLE_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: spring.h2.console.enabled
+        - name: SPRING_H2_CONSOLE_PATH
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: spring.h2.console.path
+        - name: LAUNCHER_UI_DISABLED
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: launcher.ui.disabled
+        volumeMounts:
+        - name: h2-data
+          mountPath: /app/data
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 40
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 20
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+      volumes:
+      - name: h2-data
+        emptyDir: {}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - votacao-api
+              topologyKey: kubernetes.io/hostname

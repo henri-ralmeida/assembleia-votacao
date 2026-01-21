@@ -1,17 +1,16 @@
 package com.henrique.votacao.service;
 
-import com.henrique.votacao.domain.Pauta;
+import com.henrique.votacao.domain.exception.PautaDuplicadaException;
+import com.henrique.votacao.domain.exception.PautaNaoEncontradaException;
+import com.henrique.votacao.domain.model.pauta.Pauta;
+import com.henrique.votacao.domain.model.pauta.TituloPauta;
 import com.henrique.votacao.repository.PautaRepository;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 
 @Service
@@ -29,13 +28,13 @@ public class PautaService {
      * Cria uma nova pauta no sistema.
      * @param pauta Objeto Pauta com os dados a serem salvos
      * @return Pauta criada com ID incremental
-     * @throws ResponseStatusException retorna um HTTP 409 Conflict quando já uma pauta com o mesmo título
+     * @throws PautaDuplicadaException quando já existe uma pauta com o mesmo título
      */
     public Pauta criarPauta(Pauta pauta) {
         logger.info("Criando nova pauta: {}", pauta.getTituloPauta());
 
         if (pautaRepository.existsByTituloPauta(pauta.getTituloPauta())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Já existe uma pauta com esse título");
+            throw new PautaDuplicadaException(pauta.getTituloPauta());
         }
 
         return pautaRepository.save(pauta);
@@ -47,29 +46,18 @@ public class PautaService {
      * @param titulo título da pauta
      * @param duracaoMinutos duração da sessão em minutos (opcional)
      * @return Pauta com sessão aberta (com abertura e fechamento definidos)
-     * @throws ResponseStatusException retorna um HTTP 404 Not Found
+     * @throws PautaNaoEncontradaException quando a pauta não é encontrada
      */
     public Pauta abrirSessao(String titulo, Integer duracaoMinutos) {
         Pauta pauta = pautaRepository.findByTituloPauta(titulo)
                 .orElseThrow(() -> {
                     logger.error("Pauta não encontrada: titulo={}", titulo);
-                    return new ResponseStatusException(HttpStatus.NOT_FOUND, "Pauta não encontrada");
+                    return new PautaNaoEncontradaException(titulo);
                 });
-
-        if (duracaoMinutos == null || duracaoMinutos < 1) {
-            duracaoMinutos = 1;
-            logger.warn("Duração inválida fornecida. Forçando sessão para 1 minuto");
-        }
 
         logger.info("Abrindo sessão para pauta '{}' com duração {} minuto(s)", titulo, duracaoMinutos);
 
-        LocalDateTime agora = LocalDateTime.now();
-
-        DateTimeFormatter formatador = DateTimeFormatter.ofPattern("dd/MM/yyyy - HH'h'mm'm'ss's'");
-
-        pauta.setAbertura(agora.format(formatador));
-        pauta.setFechamento(agora.plusMinutes(duracaoMinutos).format(formatador));
-        pauta.setDuracaoMinutos(duracaoMinutos);
+        pauta.abrirSessao(duracaoMinutos);
 
         return pautaRepository.save(pauta);
     }
