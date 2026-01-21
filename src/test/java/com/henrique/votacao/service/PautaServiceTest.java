@@ -1,14 +1,14 @@
 package com.henrique.votacao.service;
 
-import com.henrique.votacao.domain.Pauta;
+import com.henrique.votacao.domain.model.pauta.Pauta;
+import com.henrique.votacao.domain.model.pauta.TituloPauta;
+import com.henrique.votacao.domain.exception.PautaNaoEncontradaException;
 import com.henrique.votacao.repository.PautaRepository;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import org.mockito.Mockito;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Optional;
 
@@ -29,10 +29,10 @@ class PautaServiceTest {
     @Test
     void criarPauta_deveSalvarPauta() {
         // ARRANGE
-        Pauta pauta = new Pauta();
-        pauta.setTituloPauta("Nova Pauta");
+        TituloPauta titulo = new TituloPauta("Nova Pauta");
+        Pauta pauta = new Pauta(titulo);
         when(pautaRepository.save(any(Pauta.class))).thenReturn(pauta);
-        when(pautaRepository.existsByTituloPauta("Nova Pauta")).thenReturn(false);
+        when(pautaRepository.findByTituloPauta("Nova Pauta")).thenReturn(Optional.empty());
 
         // ACT
         Pauta result = pautaService.criarPauta(pauta);
@@ -47,8 +47,8 @@ class PautaServiceTest {
     void abrirSessao_deveAbrirSessaoComDuracaoDefault() {
         // ARRANGE
         String titulo = "Pauta Teste";
-        Pauta pauta = new Pauta();
-        pauta.setTituloPauta(titulo);
+        TituloPauta tituloPauta = new TituloPauta(titulo);
+        Pauta pauta = new Pauta(tituloPauta);
         when(pautaRepository.findByTituloPauta(titulo)).thenReturn(Optional.of(pauta));
         when(pautaRepository.save(any(Pauta.class))).thenReturn(pauta);
 
@@ -70,11 +70,10 @@ class PautaServiceTest {
         when(pautaRepository.findByTituloPauta(titulo)).thenReturn(Optional.empty());
 
         // ACT
-        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+        PautaNaoEncontradaException ex = assertThrows(PautaNaoEncontradaException.class,
                 () -> pautaService.abrirSessao(titulo, null));
 
         // ASSERT
-        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
-        assertEquals("Pauta não encontrada", ex.getReason());
+        assertTrue(ex.getMessage().contains("Pauta não encontrada"));
     }
 }

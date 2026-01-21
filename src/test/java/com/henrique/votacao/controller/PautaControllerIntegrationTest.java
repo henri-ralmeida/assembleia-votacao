@@ -2,9 +2,10 @@ package com.henrique.votacao.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import com.henrique.votacao.client.CpfClientFake;
-import com.henrique.votacao.domain.Pauta;
-import com.henrique.votacao.dto.VotoRequestDTO;
+import com.henrique.votacao.infrastructure.client.CpfClientFake;
+import com.henrique.votacao.domain.model.pauta.Pauta;
+import com.henrique.votacao.domain.model.pauta.TituloPauta;
+import com.henrique.votacao.application.dto.request.VotoRequestDTO;
 import com.henrique.votacao.service.PautaService;
 
 import jakarta.transaction.Transactional;
@@ -49,8 +50,8 @@ class PautaControllerIntegrationTest {
 
     @BeforeEach
     void setup() {
-        pauta = new Pauta();
-        pauta.setTituloPauta("Pauta Teste " + System.currentTimeMillis());
+        TituloPauta titulo = new TituloPauta("Pauta Teste " + System.currentTimeMillis());
+        pauta = new Pauta(titulo);
         pauta = pautaService.criarPauta(pauta);
         pautaService.abrirSessao(pauta.getTituloPauta(), 5);
 

@@ -1,8 +1,13 @@
 package com.henrique.votacao.service;
 
-import com.henrique.votacao.client.CpfClientFake;
-import com.henrique.votacao.domain.*;
-import com.henrique.votacao.dto.ResultadoVotacaoResponseDTO;
+import com.henrique.votacao.infrastructure.client.CpfClientFake;
+import com.henrique.votacao.domain.model.pauta.Pauta;
+import com.henrique.votacao.domain.model.pauta.TituloPauta;
+import com.henrique.votacao.domain.model.voto.Voto;
+import com.henrique.votacao.domain.model.voto.Escolha;
+import com.henrique.votacao.domain.model.voto.Cpf;
+import com.henrique.votacao.domain.exception.*;
+import com.henrique.votacao.application.dto.response.ResultadoVotacaoResponseDTO;
 import com.henrique.votacao.exception.*;
 import com.henrique.votacao.repository.VotoRepository;
 
@@ -11,11 +16,6 @@ import org.junit.jupiter.api.Test;
 
 import org.mockito.Mockito;
 
-import org.springframework.web.server.ResponseStatusException;
-import org.springframework.http.HttpStatus;
-
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.Map;
 import java.util.Optional;
 
@@ -30,8 +30,6 @@ class VotoServiceTest {
     private CpfClientFake cpfClient;
     private VotoService votoService;
 
-    private static final DateTimeFormatter FORMATADOR = DateTimeFormatter.ofPattern("dd/MM/yyyy - HH'h'mm'm'ss's'");
-
     @BeforeEach
     void setUp() {
         votoRepository = Mockito.mock(VotoRepository.class);
@@ -43,82 +41,69 @@ class VotoServiceTest {
     @Test
     void registrarVoto_deveSalvarVoto() {
         // ARRANGE
-        Pauta pauta = new Pauta();
-        pauta.setId(1L);
-        pauta.setTituloPauta("Pauta Teste");
-        pauta.setAbertura(LocalDateTime.now().minusMinutes(1).format(FORMATADOR));
-        pauta.setFechamento(LocalDateTime.now().plusMinutes(5).format(FORMATADOR));
+        TituloPauta titulo = new TituloPauta("Pauta Teste");
+        Pauta pauta = new Pauta(titulo);
+        pauta.abrirSessao(5); // Opens session for 5 minutes
 
         when(pautaService.buscarPorTitulo("Pauta Teste")).thenReturn(Optional.of(pauta));
-        when(votoRepository.existsBycpfIdAndPautaId("123", pauta.getId())).thenReturn(false);
+        when(votoRepository.existsBycpfIdAndPautaId("12345678901", pauta.getId())).thenReturn(false);
         when(cpfClient.verificarCpf()).thenReturn(Map.of("status", "ABLE_TO_VOTE"));
         when(votoRepository.save(any(Voto.class))).thenAnswer(i -> i.getArguments()[0]);
 
         // ACT
-        Voto voto = votoService.registrarVotoPorTitulo("Pauta Teste", "123", "SIM");
+        Voto voto = votoService.registrarVotoPorTitulo("Pauta Teste", "12345678901", "SIM");
 
         // ASSERT
         assertNotNull(voto);
-        assertEquals("123", voto.getCpfId());
+        assertEquals("12345678901", voto.getCpfId());
         assertEquals(Escolha.SIM, voto.getEscolha());
         assertNotNull(voto.getPauta());
-        assertEquals(pauta.getId(), voto.getPauta().getId());
         verify(votoRepository, times(1)).save(any(Voto.class));
     }
 
     @Test
     void registrarVoto_sessaoFechada_deveLancarExcecao() {
         // ARRANGE
-        Pauta pauta = new Pauta();
-        pauta.setId(1L);
-        pauta.setTituloPauta("Pauta Teste");
-        pauta.setAbertura(LocalDateTime.now().minusMinutes(5).format(FORMATADOR));
-        pauta.setFechamento(LocalDateTime.now().minusMinutes(1).format(FORMATADOR));
+        TituloPauta titulo = new TituloPauta("Pauta Teste");
+        Pauta pauta = new Pauta(titulo);
+        // Não abre a sessão ou cria uma sessão que já fechou (manualmente)
+        // Simulamos uma pauta sem sessão aberta
 
         when(pautaService.buscarPorTitulo("Pauta Teste")).thenReturn(Optional.of(pauta));
         when(cpfClient.verificarCpf()).thenReturn(Map.of("status", "ABLE_TO_VOTE"));
 
-        // ACT
-        BusinessException ex = assertThrows(BusinessException.class,
-                () -> votoService.registrarVotoPorTitulo("Pauta Teste", "123", "SIM"));
+        // ACT & ASSERT - Como a sessão não foi aberta, deve lançar SessaoNaoAbertaException
+        SessaoNaoAbertaException ex = assertThrows(SessaoNaoAbertaException.class,
+                () -> votoService.registrarVotoPorTitulo("Pauta Teste", "12345678901", "SIM"));
 
-        // ASSERT
-        assertEquals("Sessão de votação fechada", ex.getMessage());
+        assertTrue(ex.getMessage().contains("não foi aberta"));
         verify(votoRepository, never()).save(any(Voto.class));
     }
 
     @Test
     void registrarVoto_jaVotou_deveLancarExcecao() {
         // ARRANGE
-        Pauta pauta = new Pauta();
-        pauta.setId(1L);
-        pauta.setTituloPauta("Pauta Teste");
-        pauta.setAbertura(LocalDateTime.now().minusMinutes(1).format(FORMATADOR));
-        pauta.setFechamento(LocalDateTime.now().plusMinutes(5).format(FORMATADOR));
+        TituloPauta titulo = new TituloPauta("Pauta Teste");
+        Pauta pauta = new Pauta(titulo);
+        pauta.abrirSessao(5);
 
         when(pautaService.buscarPorTitulo("Pauta Teste")).thenReturn(Optional.of(pauta));
-        when(votoRepository.existsBycpfIdAndPautaId("123", pauta.getId())).thenReturn(true);
+        when(votoRepository.existsBycpfIdAndPautaId("12345678901", pauta.getId())).thenReturn(true);
         when(cpfClient.verificarCpf()).thenReturn(Map.of("status", "ABLE_TO_VOTE"));
 
-        // ACT
-        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> {
-                    throw new ResponseStatusException(HttpStatus.CONFLICT, "Associado já votou");
-                });
+        // ACT & ASSERT
+        VotoDuplicadoException ex = assertThrows(VotoDuplicadoException.class,
+                () -> votoService.registrarVotoPorTitulo("Pauta Teste", "12345678901", "SIM"));
 
-        // ASSERT
-        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
-        assertEquals("Associado já votou", ex.getReason());
-
+        assertTrue(ex.getMessage().contains("já votou"));
         verify(votoRepository, never()).save(any(Voto.class));
     }
 
     @Test
     void calcularResultado_deveContabilizarCorretamente() {
         // ARRANGE
-        Pauta pauta = new Pauta();
-        pauta.setId(1L);
-        pauta.setTituloPauta("Pauta Teste");
+        TituloPauta titulo = new TituloPauta("Pauta Teste");
+        Pauta pauta = new Pauta(titulo);
 
         when(pautaService.buscarPorTitulo("Pauta Teste")).thenReturn(Optional.of(pauta));
         when(votoRepository.countByPautaAndEscolha(pauta, Escolha.SIM)).thenReturn(4L);

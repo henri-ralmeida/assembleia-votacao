@@ -1,5 +1,6 @@
 package com.henrique.votacao.exception;
 
+import com.henrique.votacao.domain.exception.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,6 +46,56 @@ public class GlobalExceptionHandler {
         log.warn("ResponseStatusException: {}", ex.getReason());
         return ResponseEntity.status(ex.getStatusCode())
                 .body(buildBody(ex.getReason() != null ? ex.getReason() : "Erro inesperado"));
+    }
+
+    // Domain Exception Handlers
+    @ExceptionHandler(PautaNaoEncontradaException.class)
+    public ResponseEntity<Map<String, String>> handlePautaNaoEncontradaException(PautaNaoEncontradaException ex) {
+        log.warn("PautaNaoEncontradaException: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(buildBody(ex.getMessage()));
+    }
+
+    @ExceptionHandler(PautaDuplicadaException.class)
+    public ResponseEntity<Map<String, String>> handlePautaDuplicadaException(PautaDuplicadaException ex) {
+        log.warn("PautaDuplicadaException: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(buildBody(ex.getMessage()));
+    }
+
+    @ExceptionHandler(VotoDuplicadoException.class)
+    public ResponseEntity<Map<String, String>> handleVotoDuplicadoException(VotoDuplicadoException ex) {
+        log.warn("VotoDuplicadoException: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(buildBody(ex.getMessage()));
+    }
+
+    @ExceptionHandler(AssociadoNaoAutorizadoException.class)
+    public ResponseEntity<Map<String, String>> handleAssociadoNaoAutorizadoException(AssociadoNaoAutorizadoException ex) {
+        log.warn("AssociadoNaoAutorizadoException: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(buildBody(ex.getMessage()));
+    }
+
+    @ExceptionHandler(SessaoFechadaException.class)
+    public ResponseEntity<Map<String, String>> handleSessaoFechadaException(SessaoFechadaException ex) {
+        log.warn("SessaoFechadaException: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(buildBody(ex.getMessage()));
+    }
+
+    @ExceptionHandler(SessaoNaoAbertaException.class)
+    public ResponseEntity<Map<String, String>> handleSessaoNaoAbertaException(SessaoNaoAbertaException ex) {
+        log.warn("SessaoNaoAbertaException: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(buildBody(ex.getMessage()));
+    }
+
+    @ExceptionHandler(SessaoJaAbertaException.class)
+    public ResponseEntity<Map<String, String>> handleSessaoJaAbertaException(SessaoJaAbertaException ex) {
+        log.warn("SessaoJaAbertaException: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(buildBody(ex.getMessage()));
     }
 
     @ExceptionHandler(Exception.class)
